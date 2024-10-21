@@ -38,6 +38,8 @@ class Digital:
         else:
             schematics_to_export = [schematic for schematic in schematic.iterdir() if schematic.is_file()]
 
+        schematics_to_export = list(filter(lambda p: str(p).endswith(".dig"), schematics_to_export))
+
         exported_results = [(schematic_path, self.export_schematic(schematic_path, get_verilog_path(schematic_path)))
                             for schematic_path in schematics_to_export]
 
