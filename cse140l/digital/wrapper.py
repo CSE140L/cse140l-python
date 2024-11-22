@@ -1,5 +1,6 @@
 from pathlib import Path
 
+from cse140l.digital.stats import CircuitStats
 from cse140l.digital.svg import SVGExport
 from cse140l.digital.tests import Tests
 
@@ -11,3 +12,4 @@ class Digital:
 
         self.svg = SVGExport(self.cmd)
         self.test = Tests(self.cmd)
+        self.stats = CircuitStats(self.cmd)

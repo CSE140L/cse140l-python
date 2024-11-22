@@ -16,10 +16,18 @@
 
 <div>
 <h2>Circuit Screenshots:</h2>
-{% for top_level, svg in circuit_svgs %}
+{% for top_level, svg, analysis_errors in circuit_info %}
     <div>
         <h3><code>{{ top_level }}.dig</code></h3>
         {{ svg }}
+        {% if analysis_errors %}
+            <p><code>{{ top_level }}</code> has the following analysis errors:</p>
+            <ul>
+                {% for error in analysis_errors %}
+                    <li><code>{{ top_level }}</code> has {{ error }}</li>
+                {% endfor %}
+            </ul>
+        {% endif %}
     </div>
 {% endfor %}
 </div>

@@ -20,6 +20,10 @@ class AutograderWriter:
         with open(filename, 'w') as f:
             f.write(str(self))
 
+    def print_report(self) -> None:
+        for test_result in self.test_results:
+            print(f"{test_result.name}: {test_result.status.capitalize()} ({test_result.score}/{test_result.max_score})")
+
     def __str__(self) -> str:
         report: dict = {
             "tests": [res.to_dict() for res in self.test_results]

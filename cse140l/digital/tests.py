@@ -16,7 +16,7 @@ class TestOutput:
         if self.outcome != TestStatus.FAILED:
             return
 
-        error_output = re.search(self.name + ': failed.*\n(.*)\n([\w\s/:]+\n)\n', output.strip())
+        error_output = re.search(self.name + r': failed.*\n(.*)\n([\w\s/:]+\n)\n', output.strip())
         if not error_output:
             return
 
@@ -25,13 +25,13 @@ class TestOutput:
 
         self.steps = []
         for line in lines:
-            line = re.sub('E: (\w+) / F: (\w+)', r'\1/\2', line)
+            line = re.sub(r'E: (\w+) / F: (\w+)', r'\1/\2', line)
             self.steps.append(dict(zip(self.signals, line.strip().split())))
 
 
 def parse_test_output(output: str) -> List[TestOutput]:
     result: List[TestOutput] = []
-    for test_case in re.finditer('(\w+): (passed|failed)', output):
+    for test_case in re.finditer(r'(\w+): (passed|failed)', output):
         test_name = test_case.group(1)
         status = TestStatus(test_case.group(2))
 
