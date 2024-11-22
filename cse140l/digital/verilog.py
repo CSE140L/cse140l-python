@@ -1,10 +1,9 @@
 import subprocess
 from pathlib import Path
 from typing import List, Tuple
-import json
-import argparse
 
-class Digital:
+
+class VerilogExport:
     def __init__(self, jar_file: Path) -> None:
         self.jar_file = jar_file
         self.cmd = ["java", "-cp", str(self.jar_file), "CLI"]
@@ -33,10 +32,10 @@ class Digital:
             with open(top_level, 'r') as f:
                 modules = [line.rstrip('\n') for line in f]
             schematics_to_export = [
-                    schematic for schematic in schematic_dir.iterdir() if schematic.is_file() and schematic.stem in modules
+                schematic for schematic in schematic_dir.iterdir() if schematic.is_file() and schematic.stem in modules
             ]
         else:
-            schematics_to_export = [schematic for schematic in schematic.iterdir() if schematic.is_file()]
+            schematics_to_export = [schematic for schematic in schematic_dir.iterdir() if schematic.is_file()]
 
         schematics_to_export = list(filter(lambda p: str(p).endswith(".dig"), schematics_to_export))
 
@@ -66,35 +65,7 @@ class Digital:
                 ]
             }
 
-            with open(gradescope_results, "w") as gradescope_results_file:
-                json.dump(res, gradescope_results_file, indent=4)
+            # with open(gradescope_results, "w") as gradescope_results_file:
+            #     json.dump(res, gradescope_results_file, indent=4)
 
         return exported_results
-
-
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser()
-    parser.add_argument("-j", "--jar_file", required=True, type=Path)
-    parser.add_argument(
-        "-s", "--schematics_dir",
-        type=Path,
-        help="Directory containing schematics."
-    )
-    parser.add_argument(
-        "-t", "--top_level",
-        type=Path,
-        required=False,
-        help="Path containing the top level schematics to export in the schematics_dir"
-    )
-    parser.add_argument(
-        "-v", "--verilog_dir",
-        type=Path,
-        help="Directory containing schematics."
-    )
-    parser.add_argument("-g", "--gradescope_results", default=None, type=Path, help="File to save results for Gradescope to")
-
-    args = parser.parse_args()
-
-    digital = Digital(args.jar_file)
-
-    digital.export_schematics(args.schematics_dir, args.verilog_dir, top_level=args.top_level, gradescope_results=args.gradescope_results)

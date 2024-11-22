@@ -1,0 +1,25 @@
+<h1>UCSD CSE 140L Lab {{lab_number}}</h1>
+
+<div>
+{% if missing_files %}
+    <h2>We cannot find your:</h2>
+    <ul>
+        {% for missing in missing_files %}
+            <li><code>{{ missing }}.dig</code></li>
+        {% endfor %}
+    </ul>
+    <p>Please check if you have submitted all the files and that the files are named correctly!</p>
+{% else %}
+    <h2>All files submitted!</h2>
+{% endif %}
+</div>
+
+<div>
+<h2>Circuit Screenshots:</h2>
+{% for top_level, svg in circuit_svgs %}
+    <div>
+        <h3><code>{{ top_level }}.dig</code></h3>
+        {{ svg }}
+    </div>
+{% endfor %}
+</div>

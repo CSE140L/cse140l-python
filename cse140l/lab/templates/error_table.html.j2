@@ -1,0 +1,18 @@
+{% for failed_test in failed_tests %}
+    <h1>Failed: {{ failed_test.name }}</h1>
+    <p>Any wrong values are denoted as <code>Expected/Found</code>.</p>
+    <table>
+        <tr>
+            {% for signal in failed_test.signals %}
+            	<th><code>{{ signal }}</code></th>
+            {% endfor %}
+        </tr>
+        {% for step in failed_test.steps %}
+            <tr>
+        	{% for value in step.values() %}
+                <td><code>0x{{ value.replace("0x", "") }}</code></td>
+        	{% endfor %}
+            </tr>
+        {% endfor %}
+    </table>
+{% endfor %}
