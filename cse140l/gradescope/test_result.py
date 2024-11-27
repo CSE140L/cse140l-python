@@ -1,7 +1,10 @@
 from dataclasses import dataclass
 from enum import StrEnum
+from html import escape
 from typing import List
 from json import dumps
+
+from minify_html import minify
 
 
 class TestStatus(StrEnum):
@@ -55,8 +58,9 @@ class TestResult:
             result["number"] = self.number
 
         if self.output:
-            result["output"] = self.output
             result["output_format"] = self.output_format
+            if self.output_format == TextFormat.HTML or self.output_format == TextFormat.SIMPLE_FORMAT:
+                result["output"] = minify(escape(self.output, True))
 
         if self.tags:
             result["tags"] = self.tags

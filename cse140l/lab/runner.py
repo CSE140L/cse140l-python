@@ -125,7 +125,7 @@ class LabRunner:
         self.autograder_writer.print_report()
 
 if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description="Convert a TOML configuration file to a JSON file.")
+    parser = argparse.ArgumentParser(description="Run the lab test benches as defined in the config file")
 
     parser.add_argument(
         "config_file",
@@ -140,7 +140,7 @@ if __name__ == '__main__':
     parser.add_argument(
         "--gradescope",
         action="store_true",
-        help="Gradescope autograder is enabled. (This sets some default values)"
+        help="Gradescope autograder is enabled. (This sets some default values automatically)"
     )
     args = parser.parse_args()
 

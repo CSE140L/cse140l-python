@@ -2,16 +2,21 @@ from typing import List
 from cse140l.gradescope.test_result import TestResult, TextFormat
 from json import dumps
 from pathlib import Path
+from html import escape
+from minify_html import minify
 
 class AutograderWriter:
-    def __init__(self, output: str = None, output_format: TextFormat = TextFormat.TEXT):
+    def __init__(self):
         self.test_results: List[TestResult] = []
-        self.output: str = output
-        self.output_format: TextFormat = output_format
+        self.output: str | None = None
+        self.output_format: TextFormat = TextFormat.TEXT
 
     def set_output(self, output: str, output_format: TextFormat = TextFormat.TEXT):
         self.output = output
         self.output_format = output_format
+        if self.output_format == TextFormat.HTML or self.output_format == TextFormat.SIMPLE_FORMAT:
+            self.output = minify(escape(self.output, True))
+
 
     def add_test(self, test_result: TestResult):
         self.test_results.append(test_result)
