@@ -100,9 +100,15 @@ class LabRunner:
         for test in self.config.tests:
             dut: Path = self.get_schematic_path(test.top_level)
             outputs: List[TestOutput] = self.digital.test.run_test(dut, test.test_file)
-            failed: List[TestOutput] = list(filter(lambda t: t.outcome == TestStatus.FAILED, outputs))
-            score = (1. - (len(failed) / len(outputs))) * test.max_score
-            status = TestStatus.FAILED if len(failed) > 0 else TestStatus.PASSED
+
+            if outputs is not None and len(outputs) > 0:
+                failed: List[TestOutput] = list(filter(lambda t: t.outcome == TestStatus.FAILED, outputs))
+                score = (1. - (len(failed) / len(outputs))) * test.max_score
+                status = TestStatus.FAILED if len(failed) > 0 else TestStatus.PASSED
+            else:
+                failed = []
+                score = 0.
+                status = TestStatus.FAILED
 
             result = {
                 "name": test.name,
@@ -113,10 +119,12 @@ class LabRunner:
                 "visibility_on_failure": test.visibility_on_failure,
             }
 
-            if status == TestStatus.FAILED:
+            if status == TestStatus.FAILED and len(failed) > 0:
                 result["output"] = self.create_error_table(failed)
                 result["output_format"] = TextFormat.HTML
-
+            elif len(failed) == 0:
+                result["output"] = "We could not test your circuit. This could be due to misnamed ports or other circuit bugs."
+                result["output_format"] = TextFormat.TEXT
 
             test_result: TestResult = TestResult(**result)
             self.autograder_writer.add_test(test_result)
