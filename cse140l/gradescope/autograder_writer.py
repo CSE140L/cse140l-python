@@ -1,13 +1,19 @@
 from typing import List
 from cse140l.gradescope.test_result import TestResult, TextFormat
-from json import dumps
+from json import dumps, load
 from pathlib import Path
 from html import escape
 from minify_html import minify
 
 class AutograderWriter:
-    def __init__(self):
+    def __init__(self, existing_tests: List[Path] = None):
         self.test_results: List[TestResult] = []
+        if existing_tests:
+            for test_file in existing_tests:
+                with open(test_file, 'r') as f:
+                    test_json = load(f)
+                for t in test_json["tests"]:
+                    self.test_results.append(TestResult(**t))
         self.output: str | None = None
         self.output_format: TextFormat = TextFormat.TEXT
 

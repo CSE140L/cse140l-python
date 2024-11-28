@@ -37,7 +37,7 @@ class TestConfig(BaseModel):
 class LabConfig(BaseModel):
     digital_jar: Path
     lab_number: PositiveInt
-    submission_directory: Path
+    submission_directory: Path | None
     tests: List[TestConfig]
     analyze: List[AnalyzeConfig] | None = None
 
@@ -61,11 +61,14 @@ class LabConfig(BaseModel):
 
 
 
-def get_config_from_toml(config_file: Path, gradescope_mode: bool = False) -> LabConfig:
+def get_config_from_toml(config_file: Path, submission_dir: Path = None, gradescope_mode: bool = False) -> LabConfig:
     raw_config = toml.load(config_file)
 
     if gradescope_mode:
         raw_config["digital_jar"] = Path("/usr/local/bin/Digital.jar")
         raw_config["submission_directory"] = Path("/autograder/submission")
+
+    if submission_dir is not None:
+        raw_config["submission_directory"] = submission_dir
 
     return LabConfig(**raw_config)

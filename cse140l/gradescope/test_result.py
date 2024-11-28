@@ -27,12 +27,13 @@ class TextFormat(StrEnum):
     ANSI = "ansi"
 
 
-@dataclass(frozen=True)
+@dataclass
 class TestResult:
     name: str
     score: float
     max_score: float
     status: TestStatus
+    visibility: Visibility = None
     visibility_on_success: Visibility = Visibility.HIDDEN
     visibility_on_failure: Visibility = Visibility.HIDDEN
     number: str = None
@@ -50,9 +51,16 @@ class TestResult:
             "max_score": self.max_score,
             "status": self.status,
             "name": self.name,
-            "name_format": self.name_format,
-            "visibility": self.visibility_on_success if self.status == TestStatus.PASSED else self.visibility_on_failure,
+            "name_format": self.name_format
         }
+
+        if self.visibility:
+            result["visibility"] = self.visibility
+        else:
+            if self.status == TestStatus.PASSED:
+                result["visibility"] = self.visibility_on_success
+            else:
+                result["visibility"] = self.visibility_on_failure
 
         if self.number:
             result["number"] = self.number

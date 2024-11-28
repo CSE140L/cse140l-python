@@ -2,7 +2,7 @@ import os
 from collections import defaultdict
 from pathlib import Path
 import argparse
-from typing import List, Dict
+from typing import List, Dict, Tuple
 
 import jinja2
 import importlib.resources
@@ -22,11 +22,11 @@ def get_jinja_env() -> jinja2.Environment:
 
 
 class LabRunner:
-    def __init__(self, config_file: Path, gradescope_mode: bool = False):
-        self.config: LabConfig = get_config_from_toml(config_file, gradescope_mode)
+    def __init__(self, config_file: Path, gradescope_mode: bool = False, existing_tests: List[Path] = None):
+        self.config: LabConfig = get_config_from_toml(config_file, gradescope_mode=gradescope_mode)
         self.submission_dir = self.config.submission_directory
         self.top_level = sorted(set(test.top_level for test in self.config.tests))
-        self.autograder_writer = AutograderWriter()
+        self.autograder_writer = AutograderWriter(existing_tests=existing_tests)
         self.digital = Digital(self.config.digital_jar)
         self.env = get_jinja_env()
         self.generate_header()
@@ -40,7 +40,7 @@ class LabRunner:
             if (schematic_path := self.get_schematic_path(top_level)).exists():
                 found_files.append(top_level)
                 circuit_info.append((top_level,
-                    self.digital.svg.export_svg(schematic_path), analysis_errors[top_level]))
+                    self.digital.svg.export_svg(schematic_path), analysis_errors[top_level] if analysis_errors is not None else None))
             else:
                 missing_files.append(top_level)
 
@@ -73,7 +73,10 @@ class LabRunner:
     def get_schematic_path(self, top_level: str) -> Path:
         return Path(self.submission_dir, f"{top_level}.dig")
 
-    def analyze_circuit(self) -> Dict[str, List[str]]:
+    def analyze_circuit(self) -> Dict[str, List[str]] | None:
+        if self.config.analyze is None:
+            return None
+
         cached_circuits: Dict[str, List[GateStat]] = dict()
         analysis_failures: Dict[str, List[str]] = defaultdict(list)
         gate_info = lambda g: f"{gate_count}x {g.inputs}-input {g.bit_width} wide {g.name.upper()} gates" if g.inputs else f"{gate_count}x {g.bit_width} wide {g.name.upper()} gates"
@@ -142,6 +145,13 @@ if __name__ == '__main__':
         action="store_true",
         help="Gradescope autograder is enabled. (This sets some default values automatically)"
     )
+    parser.add_argument(
+        "-j",
+        "--json_files",
+        type=Path,
+        nargs="+",
+        help="Paths to pre-existing JSON files to merge into this one."
+    )
     args = parser.parse_args()
 
     if not args.config_file.exists():
@@ -150,7 +160,7 @@ if __name__ == '__main__':
 
     os.chdir(args.config_file.absolute().parent)
 
-    runner = LabRunner(args.config_file, args.gradescope)
+    runner = LabRunner(args.config_file, gradescope_mode=args.gradescope, existing_tests=args.json_files)
     runner.run_tests()
     runner.generate_report(args.output_file)
     runner.report()
