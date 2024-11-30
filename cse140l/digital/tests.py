@@ -53,6 +53,22 @@ class Tests(DigitalModule):
         super().__init__(cmd)
 
     def run_test(self, schematic_path: Path, test_path: Path) -> List[TestOutput]:
+        if not test_path.exists():
+            return [TestOutput(
+                f"{test_path} not found!",
+                TestStatus.FAILED,
+                "",
+                True
+            )]
+
+        if not schematic_path.exists():
+            return [TestOutput(
+                f"{schematic_path} not found!",
+                TestStatus.FAILED,
+                "",
+                True
+            )]
+
         args = ["test", "-circ", str(schematic_path), "-tests", str(test_path), "-verbose"]
 
         result = super()._run(args)

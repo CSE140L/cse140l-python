@@ -133,11 +133,11 @@ class LabRunner:
 
             if error:
                 result["output"] = outputs[0].output
-                result["output_format"] = TextFormat.HTML
+                result["output_format"] = TextFormat.TEXT
             elif status == TestStatus.FAILED and len(failed) > 0:
                 result["output"] = self.create_error_table(failed)
                 result["output_format"] = TextFormat.HTML
-            elif len(failed) == 0:
+            elif len(outputs) == 0:
                 result["output"] = "We could not test your circuit. This could be due to misnamed ports or other circuit bugs."
                 result["output_format"] = TextFormat.TEXT
 

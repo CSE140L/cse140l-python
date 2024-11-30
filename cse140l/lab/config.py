@@ -1,3 +1,4 @@
+import logging
 from pathlib import Path
 from typing import List
 
@@ -5,6 +6,8 @@ import toml
 from pydantic import BaseModel, PositiveFloat, field_validator, PositiveInt, NonNegativeInt, model_validator
 
 from cse140l.gradescope.test_result import Visibility
+
+logger = logging.getLogger(__name__)
 
 class GateConfig(BaseModel):
     name: str
@@ -52,11 +55,14 @@ class LabConfig(BaseModel):
     def validate_test_files(self):
         for test in self.tests:
             if not test.test_file.exists():
+                # Critical, TA staff forgot to submit a file
                 raise ValueError(f"Test file does not exist: {test.test_file}")
 
             top_level = Path(self.submission_directory, f"{test.top_level}.dig")
             if not top_level.exists():
-                raise ValueError(f"Top level does not exist: {top_level}")
+                # Non-critical, student chose not to submit to the file, but we need to grade the other parts.
+                logger.error(f"Top level does not exist: {top_level}")
+                continue
         return self
 
 
