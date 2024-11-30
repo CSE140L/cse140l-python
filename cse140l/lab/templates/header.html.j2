@@ -19,7 +19,9 @@
 {% for top_level, svg, analysis_errors in circuit_info %}
     <div>
         <h3><code>{{ top_level }}.dig</code></h3>
-        {{ svg }}
+        <div>
+            {{ svg }}
+        </div>
         {% if analysis_errors %}
             <p><code>{{ top_level }}</code> has the following analysis errors:</p>
             <ul>

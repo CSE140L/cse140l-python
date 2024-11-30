@@ -1,3 +1,4 @@
+import logging
 import os
 from collections import defaultdict
 from pathlib import Path
@@ -13,6 +14,8 @@ from cse140l.digital.wrapper import Digital
 from cse140l.gradescope.autograder_writer import AutograderWriter
 from cse140l.gradescope.test_result import TestResult, TestStatus, TextFormat
 from cse140l.lab.config import get_config_from_toml, LabConfig
+
+logger = logging.getLogger(__name__)
 
 
 def get_jinja_env() -> jinja2.Environment:
@@ -126,6 +129,8 @@ class LabRunner:
                 "visibility_on_failure": test.visibility_on_failure,
             }
 
+            logger.debug(f"Testcase result: {result}")
+
             if error:
                 result["output"] = outputs[0].output
                 result["output_format"] = TextFormat.HTML
@@ -170,6 +175,11 @@ if __name__ == '__main__':
         nargs="+",
         help="Paths to pre-existing JSON files to merge into this one."
     )
+    parser.add_argument(
+        "--debug",
+        action="store_true",
+        help="Enable debug mode."
+    )
     args = parser.parse_args()
 
     if not args.config_file.exists():
@@ -177,6 +187,8 @@ if __name__ == '__main__':
         exit(1)
 
     os.chdir(args.config_file.absolute().parent)
+
+    logging.basicConfig(level=logging.INFO if not args.debug else logging.DEBUG)
 
     runner = LabRunner(args.config_file, gradescope_mode=args.gradescope, existing_tests=args.json_files)
     runner.run_tests()

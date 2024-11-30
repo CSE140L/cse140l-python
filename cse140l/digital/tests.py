@@ -4,6 +4,10 @@ from pathlib import Path
 from cse140l.digital.util import DigitalModule
 from cse140l.gradescope.test_result import TestStatus
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 class TestOutput:
     def __init__(self, name: str, outcome: TestStatus, output: str, err: bool):
         self.name = name
@@ -38,7 +42,7 @@ def parse_test_output(output: str) -> List[TestOutput]:
     for test_case in re.finditer(r'(\w+): (passed|failed)', output):
         test_name = test_case.group(1)
         status = TestStatus(test_case.group(2))
-
+        logger.debug(f'{test_name}: {status}')
         result.append(TestOutput(test_name, status, output, False))
 
     return result
@@ -60,6 +64,7 @@ class Tests(DigitalModule):
                 f"STDOUT: {result.stdout.decode('utf-8')}\nSTDERR: {result.stderr.decode('utf-8')}",
                 True
             )
+            logger.debug(error_result.output)
             return [error_result]
 
         result_text = result.stdout.decode("utf-8").strip()

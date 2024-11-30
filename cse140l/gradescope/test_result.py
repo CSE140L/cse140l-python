@@ -68,6 +68,8 @@ class TestResult:
             result["output_format"] = self.output_format
             if self.output_format == TextFormat.HTML or self.output_format == TextFormat.SIMPLE_FORMAT:
                 result["output"] = minify(self.output)
+            else:
+                result["output"] = self.output
 
         if self.tags:
             result["tags"] = self.tags
