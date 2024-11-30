@@ -5,15 +5,16 @@ from cse140l.digital.util import DigitalModule
 from cse140l.gradescope.test_result import TestStatus
 
 class TestOutput:
-    def __init__(self, name: str, outcome: TestStatus, output: str):
+    def __init__(self, name: str, outcome: TestStatus, output: str, err: bool):
         self.name = name
         self.outcome = outcome
+        self.error =err
         self.signals: List[str] = []
         self.steps: List[dict] = []
         self._generate_table(output)
 
     def _generate_table(self, output: str) -> None:
-        if self.outcome != TestStatus.FAILED:
+        if self.outcome != TestStatus.FAILED and not self.error:
             return
 
         error_output = re.search(self.name + r': failed.*\n(.*)\n([\w\s/:]+\n)\n', output.strip())
@@ -35,7 +36,7 @@ def parse_test_output(output: str) -> List[TestOutput]:
         test_name = test_case.group(1)
         status = TestStatus(test_case.group(2))
 
-        result.append(TestOutput(test_name, status, output))
+        result.append(TestOutput(test_name, status, output, False))
 
     return result
 
@@ -48,7 +49,9 @@ class Tests(DigitalModule):
         args = ["test", "-circ", str(schematic_path), "-tests", str(test_path), "-verbose"]
 
         result = super()._run(args)
-        if result.returncode == 0:
-            pass
+
+        if result.returncode != 0:
+            print(result.stderr)
+
         result_text = result.stdout.decode("utf-8").strip()
         return parse_test_output(result_text)

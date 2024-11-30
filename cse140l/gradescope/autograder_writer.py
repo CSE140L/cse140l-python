@@ -2,7 +2,6 @@ from typing import List
 from cse140l.gradescope.test_result import TestResult, TextFormat
 from json import dumps, load
 from pathlib import Path
-from html import escape
 from minify_html import minify
 
 class AutograderWriter:
@@ -21,7 +20,7 @@ class AutograderWriter:
         self.output = output
         self.output_format = output_format
         if self.output_format == TextFormat.HTML or self.output_format == TextFormat.SIMPLE_FORMAT:
-            self.output = minify(escape(self.output, True))
+            self.output = minify(self.output)
 
 
     def add_test(self, test_result: TestResult):
