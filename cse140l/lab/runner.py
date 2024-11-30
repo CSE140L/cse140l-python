@@ -85,6 +85,10 @@ class LabRunner:
         gate_info = lambda g: f"{gate_count}x {g.inputs}-input {g.bit_width} wide {g.name.upper()} gates" if g.inputs else f"{gate_count}x {g.bit_width} wide {g.name.upper()} gates"
         for analysis in self.config.analyze:
             for top_level in analysis.top_levels:
+                if not self.get_schematic_path(top_level).exists():
+                    analysis_failures[top_level].append(f"{top_level} not found!")
+                    continue
+
                 if top_level not in cached_circuits:
                     cached_circuits[top_level] = self.digital.stats.get_stats(self.get_schematic_path(top_level))
 

@@ -73,14 +73,15 @@ class Tests(DigitalModule):
 
         result = super()._run(args)
 
-        if result.returncode != 0:
+        # Digital by default returns error codes > 100 for things like file not found etc.
+        if result.returncode > 100:
             error_result = TestOutput(
                 f"{test_path}",
                 TestStatus.FAILED,
                 f"STDOUT: {result.stdout.decode('utf-8')}\nSTDERR: {result.stderr.decode('utf-8')}",
                 True
             )
-            logger.debug(error_result.output)
+            logger.debug(f"Error running {test_path}")
             return [error_result]
 
         result_text = result.stdout.decode("utf-8").strip()
