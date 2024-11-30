@@ -101,14 +101,21 @@ class LabRunner:
             dut: Path = self.get_schematic_path(test.top_level)
             outputs: List[TestOutput] = self.digital.test.run_test(dut, test.test_file)
 
+            failed = []
+            score = 0.
+            status = TestStatus.FAILED
+            error = False
             if outputs is not None and len(outputs) > 0:
-                failed: List[TestOutput] = list(filter(lambda t: t.outcome == TestStatus.FAILED, outputs))
-                score = (1. - (len(failed) / len(outputs))) * test.max_score
-                status = TestStatus.FAILED if len(failed) > 0 else TestStatus.PASSED
-            else:
-                failed = []
-                score = 0.
-                status = TestStatus.FAILED
+                if outputs[0].error:
+                    status = TestStatus.FAILED
+                    score = 0
+                    failed = []
+                    error = True
+                else:
+                    failed: List[TestOutput] = list(filter(lambda t: t.outcome == TestStatus.FAILED, outputs))
+                    score = (1. - (len(failed) / len(outputs))) * test.max_score
+                    status = TestStatus.FAILED if len(failed) > 0 else TestStatus.PASSED
+
 
             result = {
                 "name": test.name,
@@ -119,7 +126,10 @@ class LabRunner:
                 "visibility_on_failure": test.visibility_on_failure,
             }
 
-            if status == TestStatus.FAILED and len(failed) > 0:
+            if error:
+                result["output"] = outputs[0].output
+                result["output_format"] = TextFormat.HTML
+            elif status == TestStatus.FAILED and len(failed) > 0:
                 result["output"] = self.create_error_table(failed)
                 result["output_format"] = TextFormat.HTML
             elif len(failed) == 0:

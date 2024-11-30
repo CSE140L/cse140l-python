@@ -8,16 +8,19 @@ class TestOutput:
     def __init__(self, name: str, outcome: TestStatus, output: str, err: bool):
         self.name = name
         self.outcome = outcome
-        self.error =err
+        self.error = err
+        self.output = output
         self.signals: List[str] = []
         self.steps: List[dict] = []
-        self._generate_table(output)
 
-    def _generate_table(self, output: str) -> None:
+        if not self.error:
+            self._generate_table()
+
+    def _generate_table(self) -> None:
         if self.outcome != TestStatus.FAILED and not self.error:
             return
 
-        error_output = re.search(self.name + r': failed.*\n(.*)\n([\w\s/:]+\n)\n', output.strip())
+        error_output = re.search(self.name + r': failed.*\n(.*)\n([\w\s/:]+\n)\n', self.output.strip())
         if not error_output:
             return
 
@@ -51,7 +54,13 @@ class Tests(DigitalModule):
         result = super()._run(args)
 
         if result.returncode != 0:
-            print(result.stderr)
+            error_result = TestOutput(
+                f"{test_path}",
+                TestStatus.FAILED,
+                f"STDOUT: {result.stdout.decode('utf-8')}\nSTDERR: {result.stderr.decode('utf-8')}",
+                True
+            )
+            return [error_result]
 
         result_text = result.stdout.decode("utf-8").strip()
         return parse_test_output(result_text)
