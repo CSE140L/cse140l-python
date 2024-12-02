@@ -39,13 +39,23 @@ class TestOutput:
 
 def parse_test_output(output: str) -> List[TestOutput]:
     result: List[TestOutput] = []
-    for test_case in re.finditer(r'(\w+): (passed|failed)', output):
+    for test_case in re.finditer(r'^(\w+): (\w+)[\n ]([\w !]*)', output, re.MULTILINE):
         test_name = test_case.group(1)
-        status = TestStatus(test_case.group(2))
+        raw_status = test_case.group(2)
+        if raw_status.lower() == "passed":
+            status = TestStatus.PASSED
+        elif raw_status.lower() == "failed":
+            status = TestStatus.FAILED
+        else:
+            status = "error"
         logger.debug(f'{test_name}: {status}')
-        result.append(TestOutput(test_name, status, output, False))
+        error = status == "error"
+        result.append(TestOutput(test_name, status, raw_status + test_case.group(3) if error else output, error))
 
     return result
+
+def get_num_tests_from_output(output: str) -> int:
+   return len(re.findall(r'(\w+):', output))
 
 
 class Tests(DigitalModule):
@@ -78,7 +88,7 @@ class Tests(DigitalModule):
             error_result = TestOutput(
                 f"{test_path}",
                 TestStatus.FAILED,
-                f"STDOUT: {result.stdout.decode('utf-8')}\nSTDERR: {result.stderr.decode('utf-8')}",
+                f"STDOUT: {result.stdout.decode('utf-8')}\nSTDERR: {result.stderr.decode('utf-8')}\nERR:{result.returncode}",
                 True
             )
             logger.debug(f"Error running {test_path}")
@@ -86,3 +96,20 @@ class Tests(DigitalModule):
 
         result_text = result.stdout.decode("utf-8").strip()
         return parse_test_output(result_text)
+
+if __name__ == '__main__':
+    output = """
+test_1: Test signal BEGIN not found in the circuit!
+test_2: passed
+test_3: Component STUFF not found!
+test_4: failed
+tests have failed
+    
+0 0 0 0 E: 1 / F: 2 0 0 0
+    """
+    print(get_num_tests_from_output(output))
+
+    # REGEX = r'^(\w+): ((\w+)[\n ][\w ]*)\n'
+    REGEX = r'^(\w+): (\w+)[\n ]([\w !]*)'
+
+    print(re.findall(REGEX, output, flags=re.MULTILINE))
