@@ -42,7 +42,7 @@ class TestOutput:
 
 def parse_test_output(output: str) -> List[TestOutput]:
     result: List[TestOutput] = []
-    logger.debug(output)
+    print(output)
     # https://regex101.com/r/33A4b9/1
     for test_case in re.finditer(r'^(?![\d\s]*E:.*)(.+): ([\w ]+)', output, re.MULTILINE):
         test_name = test_case.group(1)
