@@ -44,7 +44,8 @@ def parse_test_output(output: str) -> List[TestOutput]:
     result: List[TestOutput] = []
     logger.debug(output)
     # https://regex101.com/r/33A4b9/1
-    for test_case in re.finditer(r'^(?![\d\s(0x)]*E:.*)(.+): ([\w ]+)', output, re.MULTILINE):
+    # All tests need to be named test_ from now on.
+    for test_case in re.finditer(r'^(test_.+): ([\w ]+)', output, re.MULTILINE):
         test_name = test_case.group(1)
         raw_status = test_case.group(2)
         if raw_status.lower().strip() == "passed":
