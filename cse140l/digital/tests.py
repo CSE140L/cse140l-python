@@ -24,7 +24,7 @@ class TestOutput:
         if self.outcome != TestStatus.FAILED and not self.error:
             return
 
-        error_output = re.search(self.name + r': failed.*\n(.*)\n([\w\s/:]+\n)\n', self.output.strip())
+        error_output = re.search(re.escape(self.name) + r': failed.*\n(.*)\n([\w\s/:]+\n)\n', self.output.strip())
         if not error_output:
             return
 
@@ -36,10 +36,15 @@ class TestOutput:
             line = re.sub(r'E: (\w+) / F: (\w+)', r'\1/\2', line)
             self.steps.append(dict(zip(self.signals, line.strip().split())))
 
+    def __repr__(self):
+        return self.name
+
 
 def parse_test_output(output: str) -> List[TestOutput]:
     result: List[TestOutput] = []
-    for test_case in re.finditer(r'^(\w+): (\w+)[\n ]([\w !]*)', output, re.MULTILINE):
+    logger.debug(output)
+    # https://regex101.com/r/33A4b9/1
+    for test_case in re.finditer(r'^(?![\d\s]*E:.*)(.+): ([\w ]+)', output, re.MULTILINE):
         test_name = test_case.group(1)
         raw_status = test_case.group(2)
         if raw_status.lower() == "passed":
@@ -50,7 +55,7 @@ def parse_test_output(output: str) -> List[TestOutput]:
             status = "error"
         logger.debug(f'{test_name}: {status}')
         error = status == "error"
-        result.append(TestOutput(test_name, status, raw_status + test_case.group(3) if error else output, error))
+        result.append(TestOutput(test_name, status, raw_status if error else output, error))
 
     return result
 
@@ -93,7 +98,6 @@ class Tests(DigitalModule):
             )
             logger.debug(f"Error running {test_path}")
             return [error_result]
-
         result_text = result.stdout.decode("utf-8").strip()
         return parse_test_output(result_text)
 
@@ -113,3 +117,25 @@ tests have failed
     REGEX = r'^(\w+): (\w+)[\n ]([\w !]*)'
 
     print(re.findall(REGEX, output, flags=re.MULTILINE))
+
+    new_output = """
+test_1234+2341: failed (100%)
+OPERAND_ONE OPERAND_TWO ERROR_FLAGS SUM
+0x1234 0x2341 E: 7 / F: 0 3BDB
+
+test_1500+2000: failed (100%)
+OPERAND_ONE OPERAND_TWO ERROR_FLAGS SUM
+0x1500 0x2000 E: 4 / F: 0 3B00
+
+test_2045+3040: failed (100%)
+OPERAND_ONE OPERAND_TWO ERROR_FLAGS SUM
+204B 0x3040 E: A / F: 0 B0EB
+
+test_3210+0423: failed (100%)
+OPERAND_ONE OPERAND_TWO ERROR_FLAGS SUM
+0x3210 0x423 E: 4 / F: 0 3C33
+
+test_5946+3461: passed
+test_999+1111: passed
+test_2879+1090: passed
+"""
