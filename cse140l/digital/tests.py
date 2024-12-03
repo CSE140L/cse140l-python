@@ -42,18 +42,18 @@ class TestOutput:
 
 def parse_test_output(output: str) -> List[TestOutput]:
     result: List[TestOutput] = []
-    print(output)
+    logger.debug(output)
     # https://regex101.com/r/33A4b9/1
-    for test_case in re.finditer(r'^(?![\d\s]*E:.*)(.+): ([\w ]+)', output, re.MULTILINE):
+    for test_case in re.finditer(r'^(?![\d\s(0x)]*E:.*)(.+): ([\w ]+)', output, re.MULTILINE):
         test_name = test_case.group(1)
         raw_status = test_case.group(2)
-        if raw_status.lower() == "passed":
+        if raw_status.lower().strip() == "passed":
             status = TestStatus.PASSED
-        elif raw_status.lower() == "failed":
+        elif raw_status.lower().strip() == "failed":
             status = TestStatus.FAILED
         else:
             status = "error"
-        logger.debug(f'{test_name}: {status}')
+        logger.debug(f'FOUND TESTCASE: {test_name} ({status})')
         error = status == "error"
         result.append(TestOutput(test_name, status, raw_status if error else output, error))
 
