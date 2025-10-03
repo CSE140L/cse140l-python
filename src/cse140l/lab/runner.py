@@ -8,14 +8,13 @@ from typing import List, Dict, Tuple
 import jinja2
 import importlib.resources
 
-from cse140l.digital.stats import GateStat, get_gate_count
-from cse140l.digital.tests import TestOutput
-from cse140l.digital.wrapper import Digital
-from cse140l.gradescope.autograder_writer import AutograderWriter
-from cse140l.gradescope.test_result import TestResult, TestStatus, TextFormat
-from cse140l.lab.config import get_config_from_toml, LabConfig
-
-logger = logging.getLogger(__name__)
+from src.cse140l.digital.stats import GateStat, get_gate_count
+from src.cse140l.digital.tests import TestOutput
+from src.cse140l.digital.wrapper import Digital
+from src.cse140l.gradescope.autograder_writer import AutograderWriter
+from src.cse140l.gradescope.test_result import TestResult, TestStatus, TextFormat
+from src.cse140l.lab.config import get_config_from_toml, LabConfig
+from src.cse140l.log import log, setup_logger
 
 
 def get_jinja_env() -> jinja2.Environment:
@@ -133,7 +132,7 @@ class LabRunner:
                 "visibility_on_failure": test.visibility_on_failure,
             }
 
-            logger.debug(f"Testcase result: {result}")
+            log.debug(f"Testcase result: {result}")
 
             if error:
                 result["output"] = outputs[0].output
@@ -154,7 +153,7 @@ class LabRunner:
     def report(self) -> None:
         self.autograder_writer.print_report()
 
-if __name__ == '__main__':
+def main():
     parser = argparse.ArgumentParser(description="Run the lab test benches as defined in the config file")
 
     parser.add_argument(
@@ -162,16 +161,19 @@ if __name__ == '__main__':
         type=Path,
         help="Path to the input TOML configuration file."
     )
+
     parser.add_argument(
         "output_file",
         type=Path,
         help="Path to the output the report JSON file."
     )
+
     parser.add_argument(
         "--gradescope",
         action="store_true",
         help="Gradescope autograder is enabled. (This sets some default values automatically)"
     )
+
     parser.add_argument(
         "-j",
         "--json_files",
@@ -179,20 +181,29 @@ if __name__ == '__main__':
         nargs="+",
         help="Paths to pre-existing JSON files to merge into this one."
     )
+
     parser.add_argument(
         "--debug",
         action="store_true",
         help="Enable debug mode."
     )
+
+    parser.add_argument(
+        "--log-file",
+        type=str,
+        default=None,
+        help="Optional path to a file to write log output."
+    )
+
     args = parser.parse_args()
 
+    setup_logger(log_file=args.log_file, level=logging.INFO if not args.debug else logging.DEBUG)
+
     if not args.config_file.exists():
-        print("Configuration file does not exist.")
+        log.error("Configuration file does not exist!")
         exit(1)
 
     os.chdir(args.config_file.absolute().parent)
-
-    logging.basicConfig(level=logging.INFO if not args.debug else logging.DEBUG)
 
     runner = LabRunner(args.config_file, gradescope_mode=args.gradescope, existing_tests=args.json_files)
     runner.run_tests()
@@ -200,3 +211,6 @@ if __name__ == '__main__':
     runner.report()
 
     runner.analyze_circuit()
+
+if __name__ == '__main__':
+    main()

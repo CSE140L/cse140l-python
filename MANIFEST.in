@@ -1,1 +1,1 @@
-include cse140l/lab/templates/*
+include src/cse140l/lab/templates/*

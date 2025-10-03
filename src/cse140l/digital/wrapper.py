@@ -2,9 +2,9 @@ import subprocess
 from pathlib import Path
 from subprocess import Popen
 
-from cse140l.digital.stats import CircuitStats
-from cse140l.digital.svg import SVGExport
-from cse140l.digital.tests import Tests
+from src.cse140l.digital.stats import CircuitStats
+from src.cse140l.digital.svg import SVGExport
+from src.cse140l.digital.tests import Tests
 
 
 class Digital:
@@ -21,7 +21,3 @@ class Digital:
     def launch(self, circuit: Path = None) -> Popen[bytes]:
         process = subprocess.Popen(self.cmd + [str(circuit)])
         return process
-
-if __name__ == '__main__':
-    Digital("/home/anish/Workspace/IdeaProjects/Digital/target/Digital.jar").launch()
-    print("hello world")

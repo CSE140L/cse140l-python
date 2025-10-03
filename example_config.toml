@@ -1,0 +1,27 @@
+digital_jar = "/home/anish/Workspace/IdeaProjects/Digital/target/Digital.jar"
+lab_number = 4
+submission_directory = "/home/anish/Workspace/CSE140L/fa24-testbenches/lab2/schematics"
+
+[[analyze]]
+top_levels = ["BoothsMultiplierPart2", "BoothsMultiplierPart3", "BoothsMultiplierPart4"]
+
+[[analyze.gates]]
+name = "add"
+bit_width = 14
+max_amount = 0
+
+[[tests]]
+name = "test part 3"
+max_score = 5.0
+test_file = "/home/anish/Workspace/CSE140L/fa24-testbenches/lab2/schematics/test.dig"
+top_level = "BoothsMultiplierPart3"
+visibility_on_success = "hidden"
+visibility_on_failure = "visible"
+
+[[tests]]
+name = "test part 4"
+max_score = 5.0
+test_file = "/home/anish/Workspace/CSE140L/fa24-testbenches/lab2/schematics/test.dig"
+top_level = "BoothsMultiplierPart4"
+visibility_on_success = "hidden"
+visibility_on_failure = "visible"

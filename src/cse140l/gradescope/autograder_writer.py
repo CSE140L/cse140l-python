@@ -1,5 +1,5 @@
 from typing import List
-from cse140l.gradescope.test_result import TestResult, TextFormat
+from src.cse140l.gradescope.test_result import TestResult, TextFormat
 from json import dumps, load
 from pathlib import Path
 from minify_html import minify

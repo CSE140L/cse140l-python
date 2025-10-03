@@ -1,6 +1,6 @@
 from typing import List
 from pathlib import Path
-from cse140l.digital.util import DigitalModule
+from src.cse140l.digital.util import DigitalModule
 
 
 class SVGExport(DigitalModule):

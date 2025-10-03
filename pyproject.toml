@@ -1,0 +1,21 @@
+[project]
+name = "cse140l"
+version = "2.0.0"
+description = "Autograder System for UCSD CSE 140L"
+readme = "README.md"
+authors = [
+    { name = "Anish Govind", email = "anishg24@gmail.com" }
+]
+requires-python = ">=3.12"
+dependencies = [
+    "jinja2>=3.1.6",
+    "pydantic>=2.11.9",
+    "toml>=0.10.2",
+]
+
+[project.scripts]
+python-package = "cse140l.lab.runner:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

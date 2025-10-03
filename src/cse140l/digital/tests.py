@@ -1,8 +1,8 @@
 import re
 from typing import List
 from pathlib import Path
-from cse140l.digital.util import DigitalModule
-from cse140l.gradescope.test_result import TestStatus
+from src.cse140l.digital.util import DigitalModule
+from src.cse140l.gradescope.test_result import TestStatus
 
 import logging
 

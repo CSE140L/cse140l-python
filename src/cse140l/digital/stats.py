@@ -6,8 +6,8 @@ from pathlib import Path
 
 from pydantic import PositiveInt, BaseModel
 
-from cse140l.digital.util import DigitalModule
-from cse140l.lab.config import GateConfig
+from src.cse140l.digital.util import DigitalModule
+from src.cse140l.lab.config import GateConfig
 
 
 class GateStat(BaseModel):

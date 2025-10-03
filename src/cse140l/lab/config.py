@@ -5,9 +5,8 @@ from typing import List
 import toml
 from pydantic import BaseModel, PositiveFloat, field_validator, PositiveInt, NonNegativeInt, model_validator
 
-from cse140l.gradescope.test_result import Visibility
-
-logger = logging.getLogger(__name__)
+from src.cse140l.gradescope.test_result import Visibility
+from src.cse140l.log import log
 
 class GateConfig(BaseModel):
     name: str
@@ -19,7 +18,6 @@ class GateConfig(BaseModel):
 class AnalyzeConfig(BaseModel):
     top_levels: List[str]
     gates: List[GateConfig]
-
 
 class TestConfig(BaseModel):
     name: str
@@ -61,11 +59,9 @@ class LabConfig(BaseModel):
             top_level = Path(self.submission_directory, f"{test.top_level}.dig")
             if not top_level.exists():
                 # Non-critical, student chose not to submit to the file, but we need to grade the other parts.
-                logger.error(f"Top level does not exist: {top_level}")
+                log.error(f"Top level does not exist: {top_level}")
                 continue
         return self
-
-
 
 def get_config_from_toml(config_file: Path, submission_dir: Path = None, gradescope_mode: bool = False) -> LabConfig:
     raw_config = toml.load(config_file)
