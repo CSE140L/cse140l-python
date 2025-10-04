@@ -2,9 +2,9 @@ import subprocess
 from pathlib import Path
 from subprocess import Popen
 
-from src.cse140l.digital.stats import CircuitStats
-from src.cse140l.digital.svg import SVGExport
-from src.cse140l.digital.tests import Tests
+from cse140l.digital.stats import CircuitStats
+from cse140l.digital.images import ImageExport
+from cse140l.digital.tests import Tests
 
 
 class Digital:
@@ -13,7 +13,7 @@ class Digital:
         self.cmd = ["java", "-jar", str(self.jar_file)]
         self.cli_cmd = ["java", "-cp", str(self.jar_file), "CLI"]
 
-        self.svg = SVGExport(self.cli_cmd)
+        self.img = ImageExport(self.cli_cmd)
         self.test = Tests(self.cli_cmd)
         self.stats = CircuitStats(self.cli_cmd)
 

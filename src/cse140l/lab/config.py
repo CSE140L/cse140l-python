@@ -5,8 +5,8 @@ from typing import List
 import toml
 from pydantic import BaseModel, PositiveFloat, field_validator, PositiveInt, NonNegativeInt, model_validator
 
-from src.cse140l.gradescope.test_result import Visibility
-from src.cse140l.log import log
+from cse140l.gradescope.test_result import Visibility
+from cse140l.log import log
 
 class GateConfig(BaseModel):
     name: str

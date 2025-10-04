@@ -7,8 +7,8 @@ import csv
 import yaml
 from pathlib import Path
 
-from src.cse140l.digital.wrapper import Digital
-from src.cse140l.lab.config import get_config_from_toml
+from cse140l.digital.wrapper import Digital
+from cse140l.lab.config import get_config_from_toml
 
 
 class ManualGrader:

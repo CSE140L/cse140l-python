@@ -27,7 +27,7 @@ def setup_logger(log_file: str = None, level=logging.INFO):
 
     # 2. Define the Formatter
     formatter = logging.Formatter(
-        '[%(asctime)s] %(levelname)s | %(name)s.%(module)s.%(funcName)s: %(message)s',
+        '[%(asctime)s] [%(levelname)s] <%(name)s.%(module)s.%(funcName)s:%(lineno)d>: %(message)s',
         datefmt='%Y-%m-%d %H:%M:%S'
     )
 
@@ -50,6 +50,16 @@ def setup_logger(log_file: str = None, level=logging.INFO):
     # 4. Add the handler to the logger
     logger.addHandler(handler)
 
+def is_logging_to_file() -> bool:
+    """Checks if the main project logger has an active FileHandler."""
+    logger = logging.getLogger('cse140l')
+
+    # Iterate through all handlers attached to the logger
+    for handler in logger.handlers:
+        # Check if the handler is a FileHandler
+        if isinstance(handler, logging.FileHandler):
+            return True
+    return False
 
 # Initial setup to ensure a logger exists, even before CLI args are parsed
 if not log.handlers:

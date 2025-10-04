@@ -1,12 +1,13 @@
 import re
 from typing import List
 from pathlib import Path
-from src.cse140l.digital.util import DigitalModule
-from src.cse140l.gradescope.test_result import TestStatus
+import xml.etree.ElementTree as et
+import io
+from typing import Optional
 
-import logging
-
-logger = logging.getLogger(__name__)
+from cse140l.digital.util import DigitalModule
+from cse140l.gradescope.test_result import TestStatus
+from cse140l.log import log, is_logging_to_file
 
 class TestOutput:
     def __init__(self, name: str, outcome: TestStatus, output: str, err: bool):
@@ -40,12 +41,12 @@ class TestOutput:
         return self.name
 
 
-def parse_test_output(output: str) -> List[TestOutput]:
+def parse_test_output(output: str, testcase_names: List[str]) -> List[TestOutput]:
     result: List[TestOutput] = []
-    logger.debug(output)
-    # https://regex101.com/r/33A4b9/1
-    # All tests need to be named test_ from now on.
-    for test_case in re.finditer(r'^(test_.+): ([\w ]+)', output, re.MULTILINE):
+    if is_logging_to_file():
+        log.info(f"Test Output:\n{output}")
+    for t in testcase_names:
+        test_case = re.search(rf'({t}): ([\w .!?,]+)', output)
         test_name = test_case.group(1)
         raw_status = test_case.group(2)
         if raw_status.lower().strip() == "passed":
@@ -54,15 +55,61 @@ def parse_test_output(output: str) -> List[TestOutput]:
             status = TestStatus.FAILED
         else:
             status = "error"
-        logger.debug(f'FOUND TESTCASE: {test_name} ({status})')
+            log.error(f"Error running testcase '{test_name}' (reason: {raw_status.strip()})")
         error = status == "error"
-        result.append(TestOutput(test_name, status, raw_status if error else output, error))
+        test_output = TestOutput(test_name, status, raw_status if error else output, error)
+        result.append(test_output)
+
+    if len(result) == 0:
+        log.error("No test cases found!")
 
     return result
 
 def get_num_tests_from_output(output: str) -> int:
    return len(re.findall(r'(\w+):', output))
 
+def extract_all_testcase_labels(xml_path: Path) -> List[str]:
+    """
+    Reads an XML file and extracts the label string for all <visualElement>
+    nodes where <elementName> is "Testcase".
+    """
+    labels = []
+
+    try:
+        root = et.parse(xml_path).getroot()
+    except Exception as e:
+        log.error(f"Error reading or parsing file: {e}")
+        return labels
+
+    # Iterate over all <visualElement> tags
+    for element in root.findall('.//visualElement'):
+        # 1. Filter: Check if <elementName> is "Testcase"
+        element_name_tag = element.find('elementName')
+        if element_name_tag is None or element_name_tag.text != 'Testcase':
+            continue
+
+        # 2. Extract: Look for the corresponding "Label" entry
+        attributes = element.find('elementAttributes')
+        if attributes is None:
+            continue
+
+        for entry in attributes.findall('entry'):
+            children = list(entry)
+
+            # Check if the first child is <string>Label</string>
+            if (len(children) >= 1 and
+                    children[0].tag == 'string' and
+                    children[0].text == 'Label'):
+
+                # The desired value is the text of the second child <string> element.
+                if len(children) > 1 and children[1].tag == 'string':
+                    labels.append(children[1].text)
+
+                # Once the label entry is found for this Testcase, we can stop
+                # looking at other entries for this element and move to the next visualElement.
+                break
+
+    return labels
 
 class Tests(DigitalModule):
     def __init__(self, cmd: List[str]):
@@ -97,46 +144,8 @@ class Tests(DigitalModule):
                 f"STDOUT: {result.stdout.decode('utf-8')}\nSTDERR: {result.stderr.decode('utf-8')}\nERR:{result.returncode}",
                 True
             )
-            logger.debug(f"Error running {test_path}")
+            log.debug(f"Error running {test_path}")
             return [error_result]
+
         result_text = result.stdout.decode("utf-8").strip()
-        return parse_test_output(result_text)
-
-if __name__ == '__main__':
-    output = """
-test_1: Test signal BEGIN not found in the circuit!
-test_2: passed
-test_3: Component STUFF not found!
-test_4: failed
-tests have failed
-    
-0 0 0 0 E: 1 / F: 2 0 0 0
-    """
-    print(get_num_tests_from_output(output))
-
-    # REGEX = r'^(\w+): ((\w+)[\n ][\w ]*)\n'
-    REGEX = r'^(\w+): (\w+)[\n ]([\w !]*)'
-
-    print(re.findall(REGEX, output, flags=re.MULTILINE))
-
-    new_output = """
-test_1234+2341: failed (100%)
-OPERAND_ONE OPERAND_TWO ERROR_FLAGS SUM
-0x1234 0x2341 E: 7 / F: 0 3BDB
-
-test_1500+2000: failed (100%)
-OPERAND_ONE OPERAND_TWO ERROR_FLAGS SUM
-0x1500 0x2000 E: 4 / F: 0 3B00
-
-test_2045+3040: failed (100%)
-OPERAND_ONE OPERAND_TWO ERROR_FLAGS SUM
-204B 0x3040 E: A / F: 0 B0EB
-
-test_3210+0423: failed (100%)
-OPERAND_ONE OPERAND_TWO ERROR_FLAGS SUM
-0x3210 0x423 E: 4 / F: 0 3C33
-
-test_5946+3461: passed
-test_999+1111: passed
-test_2879+1090: passed
-"""
+        return parse_test_output(result_text, extract_all_testcase_labels(test_path))

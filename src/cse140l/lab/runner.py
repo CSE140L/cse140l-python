@@ -8,13 +8,13 @@ from typing import List, Dict, Tuple
 import jinja2
 import importlib.resources
 
-from src.cse140l.digital.stats import GateStat, get_gate_count
-from src.cse140l.digital.tests import TestOutput
-from src.cse140l.digital.wrapper import Digital
-from src.cse140l.gradescope.autograder_writer import AutograderWriter
-from src.cse140l.gradescope.test_result import TestResult, TestStatus, TextFormat
-from src.cse140l.lab.config import get_config_from_toml, LabConfig
-from src.cse140l.log import log, setup_logger
+from cse140l.digital.stats import GateStat, get_gate_count
+from cse140l.digital.tests import TestOutput
+from cse140l.digital.wrapper import Digital
+from cse140l.gradescope.autograder_writer import AutograderWriter
+from cse140l.gradescope.test_result import TestResult, TestStatus, TextFormat
+from cse140l.lab.config import get_config_from_toml, LabConfig
+from cse140l.log import log, setup_logger
 
 
 def get_jinja_env() -> jinja2.Environment:
@@ -42,7 +42,7 @@ class LabRunner:
             if (schematic_path := self.get_schematic_path(top_level)).exists():
                 found_files.append(top_level)
                 circuit_info.append((top_level,
-                    self.digital.svg.export_svg(schematic_path), analysis_errors[top_level] if analysis_errors is not None else None))
+                                     self.digital.img.export_png_as_base64(schematic_path), analysis_errors[top_level] if analysis_errors is not None else None))
             else:
                 missing_files.append(top_level)
 
