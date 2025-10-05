@@ -4,6 +4,7 @@ from collections import defaultdict
 from pathlib import Path
 import argparse
 from typing import List, Dict, Tuple
+import base64
 
 import jinja2
 import importlib.resources
@@ -41,8 +42,11 @@ class LabRunner:
         for top_level in self.top_level:
             if (schematic_path := self.get_schematic_path(top_level)).exists():
                 found_files.append(top_level)
-                circuit_info.append((top_level,
-                                     self.digital.img.export_png_as_base64(schematic_path), analysis_errors[top_level] if analysis_errors is not None else None))
+                circuit_info.append((
+                    top_level,
+                    "data:image/svg+xml;base64," + base64.b64encode(self.digital.img.export_svg(schematic_path).encode("utf-8")).decode("ascii"),
+                    analysis_errors[top_level] if analysis_errors is not None else None
+                ))
             else:
                 missing_files.append(top_level)
 
@@ -81,7 +85,7 @@ class LabRunner:
 
         cached_circuits: Dict[str, List[GateStat]] = dict()
         analysis_failures: Dict[str, List[str]] = defaultdict(list)
-        gate_info = lambda g: f"{gate_count}x {g.inputs}-input {g.bit_width} wide {g.name.upper()} gates" if g.inputs else f"{gate_count}x {g.bit_width} wide {g.name.upper()} gates"
+        gate_info = lambda g: f"{gate_count}x {g.inputs}-input {g.bit_width}-wide {g.name.upper()} gates" if g.inputs else f"{gate_count}x {g.bit_width} wide {g.name.upper()} gates"
         for analysis in self.config.analyze:
             for top_level in analysis.top_levels:
                 if not self.get_schematic_path(top_level).exists():
@@ -94,15 +98,15 @@ class LabRunner:
                 for gate in analysis.gates:
                     gate_count = get_gate_count(cached_circuits[top_level], gate)
                     if gate.max_amount is not None and gate.max_amount < gate_count:
-                        analysis_failures[top_level].append(f"greater than {gate_info(gate)}")
+                        analysis_failures[top_level].append(f"circuit has greater than {gate_info(gate)}")
 
                     if gate.min_amount is not None and gate.min_amount > gate_count:
-                        analysis_failures[top_level].append(f"less than {gate_info(gate)}")
+                        analysis_failures[top_level].append(f"circuit has less than {gate_info(gate)}")
 
         return analysis_failures
 
 
-    def run_tests(self) -> None:
+    def run_tests(self, html_report_suffix: Path = None) -> None:
         for test in self.config.tests:
             dut: Path = self.get_schematic_path(test.top_level)
             outputs: List[TestOutput] = self.digital.test.run_test(dut, test.test_file)
@@ -138,6 +142,10 @@ class LabRunner:
                 result["output"] = outputs[0].output
                 result["output_format"] = TextFormat.TEXT
             elif status == TestStatus.FAILED and len(failed) > 0:
+                html = self.create_error_table(failed)
+                if html_report_suffix is not None:
+                    html_report_out = Path(f"{html_report_suffix}_error_{test.name.lower().replace(' ', '-')}_{test.top_level.lower().replace(' ', '-')}.html")
+                    html_report_out.write_text(html)
                 result["output"] = self.create_error_table(failed)
                 result["output_format"] = TextFormat.HTML
             elif len(outputs) == 0:
@@ -189,10 +197,24 @@ def main():
     )
 
     parser.add_argument(
-        "--log-file",
+        "--log_file",
         type=str,
         default=None,
         help="Optional path to a file to write log output."
+    )
+
+    parser.add_argument(
+        "--html_report",
+        type=Path,
+        default=None,
+        help="Optional path to a file to write the HTML report."
+    )
+
+    parser.add_argument(
+        "--error_html_report",
+        type=Path,
+        default=None,
+        help="Optional path to a file to write the error HTML reports."
     )
 
     args = parser.parse_args()
@@ -206,11 +228,13 @@ def main():
     os.chdir(args.config_file.absolute().parent)
 
     runner = LabRunner(args.config_file, gradescope_mode=args.gradescope, existing_tests=args.json_files)
-    runner.run_tests()
+    runner.run_tests(args.error_html_report)
     runner.generate_report(args.output_file)
     runner.report()
-
     runner.analyze_circuit()
+
+    if args.html_report:
+        args.html_report.write_text(runner.create_header())
 
 if __name__ == '__main__':
     main()

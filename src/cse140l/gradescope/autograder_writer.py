@@ -20,7 +20,12 @@ class AutograderWriter:
         self.output = output
         self.output_format = output_format
         if self.output_format == TextFormat.HTML or self.output_format == TextFormat.SIMPLE_FORMAT:
-            self.output = minify(self.output)
+            self.output = minify(
+                self.output.replace('"', "'"),
+                minify_css=True,
+                minify_js=True,
+                remove_processing_instructions=True,
+            )
 
 
     def add_test(self, test_result: TestResult):
