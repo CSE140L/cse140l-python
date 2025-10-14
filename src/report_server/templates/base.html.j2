@@ -1,0 +1,83 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}CSE 140L Report{% endblock %}</title>
+    <style>
+        /* UCSD-Inspired Color Palette */
+        :root {
+            --ucsd-blue: #003865;
+            --ucsd-gold: #FFC107;
+            --ucsd-sky-blue: #B0E0E6;
+            --bg-light: #f8f9fa;
+            --text-dark: #212529;
+            --text-light: #6c757d;
+            --border-light: #dee2e6;
+            --status-success: #28A745;
+            --status-error: #DC3545;
+            --status-error-light: #F8D7DA;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: var(--bg-light);
+            color: var(--text-dark);
+            margin: 0;
+            padding: 0;
+        }
+
+        .main-container {
+            padding: 1rem 2rem;
+            max-width: 1200px;
+            margin: 2rem auto;
+        }
+
+        /* Styles for simple centered pages (404, locked) */
+        .centered-container {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            text-align: center;
+            padding: 1rem;
+        }
+
+        .centered-box {
+            padding: 2rem 3rem;
+            background-color: #ffffff;
+            border-radius: 0.5rem;
+            box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
+            border-top: 5px solid var(--ucsd-blue);
+            max-width: 600px;
+        }
+
+        .centered-box h1 {
+            color: var(--ucsd-blue);
+            font-size: 2.2rem;
+        }
+
+        .centered-box p {
+            font-size: 1.1rem;
+            color: var(--text-light);
+        }
+
+        .centered-box code {
+            background-color: var(--ucsd-sky-blue);
+            padding: 3px 6px;
+            border-radius: 4px;
+            color: var(--ucsd-blue);
+            font-family: monospace;
+        }
+
+    </style>
+    {% block styles %}{% endblock %}
+</head>
+<body>
+
+{% block content %}{% endblock %}
+
+{% block scripts %}{% endblock %}
+
+</body>
+</html>

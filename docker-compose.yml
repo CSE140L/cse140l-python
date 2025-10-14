@@ -1,6 +1,6 @@
 version: '3.8'
 services:
-  web:
+  cse140l-report-server:
     build: .
     ports:
       - "1407:1407"
@@ -8,5 +8,7 @@ services:
       - .env
     environment:
       - DATABASE_PATH=/data/reports.db
+      - REPORT_SERVER_CONFIG_PATH=/app/server_config.toml
     volumes:
       - ./report_data:/data
+      - ./server_config.toml:/app/server_config.toml

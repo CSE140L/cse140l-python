@@ -30,10 +30,35 @@ class LabRunner:
         self.digital = Digital(self.config.digital_jar)
         self.report_server_url = report_server_url
         self.student_id = student_id
+        self.report_uuid = None
+        self._init_report()
         self.all_failed_tests = []
         self.circuit_info = []
         self.missing_files = []
         self.test_errors = defaultdict(list)
+
+    def _init_report(self):
+        """Initializes a report on the server to get a UUID."""
+        token = os.environ.get("REPORT_SERVER_AUTH_TOKEN")
+        if not self.report_server_url or not self.student_id or not token:
+            return
+
+        endpoint = f"{self.report_server_url.rstrip('/')}/report/{self.config.lab_number}/{self.student_id}"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+
+        try:
+            # Post empty data to create the report entry and get a UUID
+            response = requests.post(endpoint, headers=headers, data=json.dumps({}))
+            response.raise_for_status()
+            response_json = response.json()
+            self.report_uuid = response_json.get("uuid")
+            if self.report_uuid:
+                log.info(f"Initialized report with UUID: {self.report_uuid}")
+        except (requests.exceptions.RequestException, json.JSONDecodeError) as e:
+            log.warning(f"Could not initialize report on server to get UUID: {e}")
 
     def _test_output_to_dict(self, test_output: TestOutput) -> Dict:
         """Converts a TestOutput object to a serializable dictionary."""
@@ -85,7 +110,7 @@ class LabRunner:
         }
 
     def post_report(self, url: str, student_id: str, token: str) -> None:
-        """Posts the report data to the report server."""
+        """Posts the report data to the report server and stores the report UUID."""
         if not url or not student_id or not token:
             log.warning("Report server URL, student ID, or token not provided. Skipping report submission.")
             return
@@ -101,7 +126,14 @@ class LabRunner:
             response = requests.post(endpoint, headers=headers, data=json.dumps(report_data))
             response.raise_for_status()
             log.info(f"Successfully posted report for student {student_id} to {endpoint}")
-            log.info(f"View report at {endpoint}")
+            try:
+                response_json = response.json()
+                self.report_uuid = response_json.get("uuid")
+                view_url = response_json.get("url")
+                if view_url:
+                    log.info(f"View report at {view_url}")
+            except (json.JSONDecodeError, AttributeError) as e:
+                log.warning(f"Could not parse response from report server: {e}")
         except requests.exceptions.RequestException as e:
             log.error(f"Failed to post report to server: {e}")
             if e.response is not None:
@@ -180,15 +212,8 @@ class LabRunner:
             elif status == TestStatus.FAILED and len(failed) > 0:
                 self.all_failed_tests.append({"test_name": test.name, "failed_steps": failed})
                 output_text = f"{len(failed)} out of {len(outputs)} test vectors failed."
-                if self.report_server_url and self.student_id:
-                    fragment = test.name.lower().replace(' ', '-')
-                    report_url = f"{self.report_server_url.rstrip('/')}/report/{self.config.lab_number}/{self.student_id}#{fragment}"
-                    output_text += f" See [web report]({report_url}) for details."
-                    result["output_format"] = TextFormat.MARKDOWN
-                else:
-                    output_text += " See web report for details."
-                    result["output_format"] = TextFormat.TEXT
                 result["output"] = output_text
+                result["output_format"] = TextFormat.TEXT
             elif len(outputs) == 0:
                 result["output"] = "We could not test your circuit. This could be due to misnamed ports or other circuit bugs."
                 result["output_format"] = TextFormat.TEXT
@@ -196,11 +221,27 @@ class LabRunner:
             test_result: TestResult = TestResult(**result)
             self.autograder_writer.add_test(test_result)
 
-    def generate_report(self, report_path: Path) -> None:
+    def generate_results_json(self, report_path: Path) -> None:
+        """Generates the final Gradescope results.json file."""
         if self.report_server_url and self.student_id:
-            report_url = f"{self.report_server_url.rstrip('/')}/report/{self.config.lab_number}/{self.student_id}"
-            output_text = f"Your detailed web report is available at [{report_url}]({report_url})."
-            self.autograder_writer.set_output(output_text, output_format=TextFormat.MARKDOWN)
+            if self.report_uuid:
+                report_url = f"{self.report_server_url.rstrip('/')}/report/{self.report_uuid}"
+                # Set the main output text for the autograder
+                output_text = f"Your detailed web report is available at [{report_url}]({report_url})."
+                self.autograder_writer.set_output(output_text, output_format=TextFormat.MARKDOWN)
+
+                # Update individual test results with the report URL
+                for test in self.autograder_writer.test_results:
+                    if test.status == TestStatus.FAILED and "test vectors failed" in (test.output or ""):
+                        fragment = test.name.lower().replace(' ', '-')
+                        url_with_fragment = f"{report_url}#{fragment}"
+                        test.output += f" See [web report]({url_with_fragment}) for details."
+                        test.output_format = TextFormat.MARKDOWN
+            else:
+                # Handle error case where UUID was not obtained
+                output_text = "There was an error generating your web report. Please contact your TA for assistance."
+                self.autograder_writer.set_output(output_text, output_format=TextFormat.TEXT)
+        
         self.autograder_writer.write_report(report_path)
 
     def report(self) -> None:
@@ -287,10 +328,9 @@ def main():
         student_id=args.student_id
     )
     runner.run_tests()
-    runner.generate_report(args.output_file)
-    runner.report()
-    
     runner.post_report(args.report_server_url, args.student_id, args.auth_token)
+    runner.generate_results_json(args.output_file)
+    runner.report()
 
 if __name__ == '__main__':
     main()

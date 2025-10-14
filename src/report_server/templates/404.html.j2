@@ -1,16 +1,13 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <title>Report Not Found</title>
-    <style>
-        body { font-family: sans-serif; text-align: center; padding: 40px; }
-        h1 { color: #dc3545; }
-    </style>
-</head>
-<body>
-    <h1>Report Not Found</h1>
-    <p>No report has been generated for lab {{ lab_number }} student ID: <code>{{ student_id }}</code>.</p>
-    <p>Please submit the lab generate a report.</p>
-</body>
-</html>
+{% extends "base.html.j2" %}
+
+{% block title %}Report Not Found{% endblock %}
+
+{% block content %}
+<div class="centered-container">
+    <div class="centered-box">
+        <h1>Report Not Found</h1>
+        <p>No report has been generated for <strong>Lab {{ lab_number }}</strong> with student ID: <code>{{ student_id }}</code>.</p>
+        <p>Please submit the lab to generate a report.</p>
+    </div>
+</div>
+{% endblock %}
