@@ -32,6 +32,7 @@ class LabRunner:
         self.autograder_writer = AutograderWriter(existing_tests=existing_tests)
         self.digital = Digital(self.config.digital_jar)
         self.env = get_jinja_env()
+        self.all_failed_tests = []
         self.generate_header()
 
     def create_header(self) -> str:
@@ -57,6 +58,35 @@ class LabRunner:
                 "circuit_info": circuit_info,
                 "missing_files": missing_files,
                 "lab_number": self.config.lab_number,
+            }
+        )
+
+        return output
+
+    def create_html_report(self) -> str:
+        missing_files = []
+        found_files = []
+        circuit_info = []
+        analysis_errors = self.analyze_circuit()
+        for top_level in self.top_level:
+            if (schematic_path := self.get_schematic_path(top_level)).exists():
+                found_files.append(top_level)
+                circuit_info.append((
+                    top_level,
+                    "data:image/svg+xml;base64," + base64.b64encode(self.digital.img.export_svg(schematic_path).encode("utf-8")).decode("ascii"),
+                    analysis_errors[top_level] if analysis_errors is not None else None
+                ))
+            else:
+                missing_files.append(top_level)
+
+        template = self.env.get_template("header.html.j2")
+
+        output = template.render(
+            {
+                "circuit_info": circuit_info,
+                "missing_files": missing_files,
+                "lab_number": self.config.lab_number,
+                "all_failed_tests": self.all_failed_tests,
             }
         )
 
@@ -106,7 +136,7 @@ class LabRunner:
         return analysis_failures
 
 
-    def run_tests(self, html_report_suffix: Path = None) -> None:
+    def run_tests(self) -> None:
         for test in self.config.tests:
             dut: Path = self.get_schematic_path(test.top_level)
             outputs: List[TestOutput] = self.digital.test.run_test(dut, test.test_file)
@@ -142,10 +172,7 @@ class LabRunner:
                 result["output"] = outputs[0].output
                 result["output_format"] = TextFormat.TEXT
             elif status == TestStatus.FAILED and len(failed) > 0:
-                html = self.create_error_table(failed)
-                if html_report_suffix is not None:
-                    html_report_out = Path(f"{html_report_suffix}_error_{test.name.lower().replace(' ', '-')}_{test.top_level.lower().replace(' ', '-')}.html")
-                    html_report_out.write_text(html)
+                self.all_failed_tests.append({"test_name": test.name, "failed_steps": failed})
                 result["output"] = self.create_error_table(failed)
                 result["output_format"] = TextFormat.HTML
             elif len(outputs) == 0:
@@ -210,13 +237,6 @@ def main():
         help="Optional path to a file to write the HTML report."
     )
 
-    parser.add_argument(
-        "--error_html_report",
-        type=Path,
-        default=None,
-        help="Optional path to a file to write the error HTML reports."
-    )
-
     args = parser.parse_args()
 
     setup_logger(log_file=args.log_file, level=logging.INFO if not args.debug else logging.DEBUG)
@@ -228,13 +248,13 @@ def main():
     os.chdir(args.config_file.absolute().parent)
 
     runner = LabRunner(args.config_file, gradescope_mode=args.gradescope, existing_tests=args.json_files)
-    runner.run_tests(args.error_html_report)
+    runner.run_tests()
     runner.generate_report(args.output_file)
     runner.report()
     runner.analyze_circuit()
 
     if args.html_report:
-        args.html_report.write_text(runner.create_header())
+        args.html_report.write_text(runner.create_html_report())
 
 if __name__ == '__main__':
     main()
