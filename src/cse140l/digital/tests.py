@@ -46,12 +46,16 @@ def parse_test_output(output: str, testcase_names: List[str]) -> List[TestOutput
     if is_logging_to_file():
         log.info(f"Test Output:\n{output}")
     for t in testcase_names:
-        test_case = re.search(rf'({t}): ([\w .!?,]+)', output)
+        test_case = re.search(rf'({t}): (.*)', output)
+        if not test_case:
+            log.warning(f"Could not find test case '{t}' in output.")
+            continue
         test_name = test_case.group(1)
         raw_status = test_case.group(2)
-        if raw_status.lower().strip() == "passed":
+        raw_status_lower = raw_status.lower().strip()
+        if raw_status_lower == "passed":
             status = TestStatus.PASSED
-        elif raw_status.lower().strip() == "failed":
+        elif "failed" in raw_status_lower:
             status = TestStatus.FAILED
         else:
             status = "error"
