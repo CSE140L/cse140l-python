@@ -1,0 +1,12 @@
+version: '3.8'
+services:
+  web:
+    build: .
+    ports:
+      - "1407:1407"
+    env_file:
+      - .env
+    environment:
+      - DATABASE_PATH=/data/reports.db
+    volumes:
+      - ./report_data:/data

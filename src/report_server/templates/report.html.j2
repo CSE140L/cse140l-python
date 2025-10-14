@@ -1,0 +1,434 @@
+<style>
+    /* UCSD-Inspired Color Palette */
+    :root {
+        --ucsd-blue-dark: #003865;
+        --ucsd-blue-light: #B0E0E6;
+        --status-success: #28A745; /* Green */
+        --status-success-light: #DCF8E5; /* Very Light Green BG */
+        --status-error: #DC3545; /* Red */
+        --status-error-light: #F8D7DA; /* Light Red for Failing Rows */
+        --status-warning: #FFC107; /* Yellow */
+        --ucsd-neutral-bg: #F0F8FF;
+        --ucsd-code-bg: #E6E6FA;
+    }
+
+    /* Global and Status Styles */
+    body {
+        font-family: 'Arial', sans-serif;
+        background-color: var(--ucsd-neutral-bg);
+        color: var(--ucsd-blue-dark);
+        padding: 20px;
+    }
+    h1 {
+        background-color: var(--ucsd-blue-dark);
+        color: var(--status-warning);
+        padding: 15px;
+        border-radius: 8px;
+        text-align: center;
+        margin-bottom: 10px;
+    }
+    h2 {
+        color: var(--ucsd-blue-dark);
+        border-bottom: 2px solid var(--ucsd-blue-light);
+        padding-bottom: 5px;
+        margin-top: 25px;
+    }
+    h1 + h2 {
+        text-align: center;
+        border-bottom: none;
+        margin-top: 0;
+        margin-bottom: 30px;
+    }
+
+    .file-status {
+        padding: 20px;
+        border-radius: 8px;
+        margin-bottom: 30px;
+    }
+
+    /* --- SUCCESS STATE (GREEN) --- */
+    .status-success {
+        background-color: var(--status-success-light);
+        border: 2px solid var(--status-success);
+    }
+    .status-success h2, .status-success p {
+        color: var(--status-success);
+        border-bottom: none;
+    }
+    /* ----------------------------- */
+
+    /* Error State (Red) */
+    .status-error {
+        background-color: #F8D7DA;
+        border: 2px solid var(--status-error);
+    }
+    .status-error h2, .status-error p {
+        color: var(--status-error);
+    }
+
+    /* Code and List Styling */
+    code {
+        background-color: var(--ucsd-code-bg);
+        padding: 2px 4px;
+        border-radius: 4px;
+        color: var(--ucsd-blue-dark);
+    }
+    ul {
+        list-style: none;
+        padding-left: 0;
+    }
+    li {
+        background-color: var(--ucsd-blue-light);
+        margin-bottom: 5px;
+        padding: 8px;
+        border-left: 5px solid var(--ucsd-blue-dark);
+        border-radius: 4px;
+    }
+
+    /* Circuit Screenshot Styling */
+    .circuit-container {
+        padding: 15px;
+        border: 1px solid var(--ucsd-blue-light);
+        border-radius: 6px;
+        margin-bottom: 20px;
+        background-color: #FFFFFF;
+    }
+    .circuit-image img {
+        width: 100%;
+        max-width: 800px;
+        height: auto;
+        display: block;
+        border: 1px dashed var(--ucsd-blue-light);
+        padding: 10px;
+    }
+
+    /* Dropdown Styles */
+    details {
+        border: 1px solid var(--ucsd-blue-light);
+        border-radius: 8px;
+        margin-bottom: 10px;
+        background-color: #FFFFFF;
+    }
+    summary {
+        padding: 10px;
+        font-weight: bold;
+        cursor: pointer;
+        outline: none;
+    }
+    details[open] {
+        border-color: var(--ucsd-blue-dark);
+    }
+    summary > h3 {
+        display: inline;
+        margin: 0;
+        padding: 0;
+        border: none;
+    }
+
+    /* General Styling */
+    h3 {
+        color: var(--ucsd-blue-dark);
+        border-bottom: 2px solid var(--ucsd-blue-light);
+        padding-bottom: 5px;
+        margin-top: 25px;
+    }
+    h4 {
+        color: var(--ucsd-blue-dark);
+        margin-top: 20px;
+    }
+
+    .traceback-content {
+        padding: 10px;
+        border-top: 2px solid var(--ucsd-blue-dark);
+        margin-top: 10px;
+    }
+
+    .failed-test-container {
+        margin-bottom: 20px;
+    }
+
+    /* Scrollbox for EACH individual table */
+    .table-scroll-container {
+        overflow-x: auto;
+        margin-bottom: 20px;
+        border: 1px solid var(--ucsd-blue-light);
+        border-radius: 4px;
+        max-height: 400px;
+        overflow-y: auto;
+    }
+
+    /* Table Styling */
+    table {
+        width: 100%;
+        min-width: max-content;
+        border-collapse: collapse;
+        font-family: monospace;
+        font-size: 0.85em;
+    }
+    th, td {
+        border: 1px solid #CCCCCC;
+        padding: 5px 8px;
+        text-align: center;
+        white-space: nowrap;
+    }
+    th {
+        background-color: var(--ucsd-blue-dark);
+        color: white;
+        text-transform: uppercase;
+        font-weight: bold;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+    }
+
+    td code {
+        padding: 0;
+        background-color: transparent;
+        color: var(--ucsd-blue-dark);
+        display: block;
+    }
+
+    /* Highlighting Styles */
+    .failing-row {
+        background-color: var(--status-error-light);
+    }
+    .failing-row td {
+        color: var(--status-error);
+    }
+    .failing-cell {
+        background-color: var(--status-error);
+    }
+    .failing-cell code {
+        color: white;
+        font-weight: bold;
+    }
+
+    /* Toolbar Styles */
+    .traceback-toolbar {
+        margin-bottom: 10px;
+        display: flex;
+        gap: 20px;
+        align-items: center;
+    }
+
+    /* 3-Way Toggle Switch */
+    .base-toggle {
+        position: relative;
+        display: flex;
+        align-items: center;
+        background-color: var(--ucsd-blue-light);
+        border-radius: 15px;
+        padding: 2px;
+        width: 180px;
+    }
+    .base-toggle input {
+        display: none;
+    }
+    .base-toggle label {
+        flex: 1;
+        text-align: center;
+        padding: 4px 0;
+        cursor: pointer;
+        z-index: 2;
+        color: var(--ucsd-blue-dark);
+        font-size: 0.9em;
+        transition: color 0.3s;
+    }
+    .base-toggle .toggle-indicator {
+        position: absolute;
+        top: 2px;
+        left: 2px;
+        height: calc(100% - 4px);
+        width: calc((100% - 4px) / 3);
+        background-color: var(--ucsd-blue-dark);
+        border-radius: 13px;
+        transition: transform 0.3s ease;
+        z-index: 1;
+    }
+    .base-toggle input:checked + label {
+        color: white;
+    }
+    .base-toggle input#base-hex:checked ~ .toggle-indicator { transform: translateX(0); }
+    .base-toggle input#base-bin:checked ~ .toggle-indicator { transform: translateX(100%); }
+    .base-toggle input#base-dec:checked ~ .toggle-indicator { transform: translateX(200%); }
+
+    /* Checkbox for Failures */
+    .failure-toggle {
+        display: flex;
+        align-items: center;
+    }
+    .failure-toggle label {
+        margin-left: 5px;
+        cursor: pointer;
+    }
+
+</style>
+
+<h1>UCSD CSE 140L Lab {{lab_number}} Report</h1>
+<h2>Student ID: <code>{{ student_id }}</code></h2>
+
+<div class="file-status {% if missing_files %}status-error{% else %}status-success{% endif %}">
+    {% if missing_files %}
+        <h2>Missing Files Detected:</h2>
+        <p>We require the following file(s) for grading. Please check your submission and file names correctly!</p>
+        <ul>
+            {% for missing in missing_files %}
+                <li>Missing File: <code>{{ missing }}.dig</code></li>
+            {% endfor %}
+        </ul>
+    {% else %}
+        <h2>All Required Files Submitted!</h2>
+        <p>Proceeding to circuit analysis and grading.</p>
+    {% endif %}
+</div>
+
+<div>
+    <h2>Submitted Circuit Analysis:</h2>
+    {% for info in circuit_info %}
+        <details>
+            <summary><h3>Circuit File: <code>{{ info.top_level }}.dig</code></h3></summary>
+            <div class="circuit-container">
+                <div class="circuit-image">
+                    <p><strong>Screenshot of Circuit:</strong></p>
+                    <img src="{{ info.base64_png_data }}" alt="Screenshot of {{ info.top_level }} Circuit" />
+                </div>
+
+                {% if info.analysis_errors %}
+                    <div class="status-error" style="background-color: #F8D7DA; border-color: var(--status-error); padding: 10px;">
+                        <h4>Circuit Analysis Errors: </h4>
+                        <ul>
+                            {% for error in info.analysis_errors %}
+                                <li style="border-left: 5px solid var(--status-error); background-color: #FFF0F5;">
+                                    Error in <code>{{ info.top_level }}</code>: {{ error }}
+                                </li>
+                            {% endfor %}
+                        </ul>
+                        <p style="color: var(--status-error); font-weight: bold;">Please fix these issues before resubmitting.</p>
+                    </div>
+                {% endif %}
+            </div>
+        </details>
+    {% endfor %}
+</div>
+
+{% if all_failed_tests %}
+<div>
+    <h2>Testbench Tracebacks</h2>
+    {% for test_run in all_failed_tests %}
+        {% set outer_loop_index = loop.index %}
+        <details open>
+            <summary><h3>Failures in: {{ test_run.test_name }}</h3></summary>
+            <div class="traceback-content">
+                {% for failed_test in test_run.failed_steps %}
+                    <div class="failed-test-container">
+                        <h4>Failed Test Case: <code>{{ failed_test.name }}</code></h4>
+                        <p>
+                            All values are displayed in <strong>hexadecimal</strong>.
+                            Any wrong values are highlighted in red, where the format is <code>Expected/Found</code>.
+                        </p>
+                        
+                        <div class="traceback-toolbar">
+                            <div class="base-toggle">
+                                <input type="radio" id="base-hex-{{ outer_loop_index }}-{{ loop.index }}" name="base-toggle-{{ outer_loop_index }}-{{ loop.index }}" checked onchange="setBase(this, 'hex')">
+                                <label for="base-hex-{{ outer_loop_index }}-{{ loop.index }}">Hex</label>
+                                <input type="radio" id="base-bin-{{ outer_loop_index }}-{{ loop.index }}" name="base-toggle-{{ outer_loop_index }}-{{ loop.index }}" onchange="setBase(this, 'bin')">
+                                <label for="base-bin-{{ outer_loop_index }}-{{ loop.index }}">Bin</label>
+                                <input type="radio" id="base-dec-{{ outer_loop_index }}-{{ loop.index }}" name="base-toggle-{{ outer_loop_index }}-{{ loop.index }}" onchange="setBase(this, 'dec')">
+                                <label for="base-dec-{{ outer_loop_index }}-{{ loop.index }}">Dec</label>
+                                <div class="toggle-indicator"></div>
+                            </div>
+                            <div class="failure-toggle">
+                                <input type="checkbox" id="fail-toggle-{{ outer_loop_index }}-{{ loop.index }}" onchange="toggleFailures(this)">
+                                <label for="fail-toggle-{{ outer_loop_index }}-{{ loop.index }}">Show only failures</label>
+                            </div>
+                        </div>
+
+                        <div class="table-scroll-container">
+                            <table class="traceback-table" data-display-base="hex">
+                                <thead>
+                                    <tr>
+                                        <th>Step</th>
+                                        {% for signal in failed_test.signals %}
+                                            <th><code>{{ signal }}</code></th>
+                                        {% endfor %}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for step in failed_test.steps %}
+                                        {% if step %}
+                                        <tr class="test-row {% if '/' in step.values() | join %}failing-row{% endif %}">
+                                            <td>{{ loop.index }}</td>
+                                            {% for value in step.values() %}
+                                                {% set is_failing = '/' in value %}
+                                                {% if is_failing %}
+                                                    {% set parts = value.split('/') %}
+                                                    {% set expected_hex = parts[0] %}
+                                                    {% set found_hex = parts[1] %}
+                                                    <td class="failing-cell"
+                                                        data-hex="{{ expected_hex.replace('0x', '') }}/{{ found_hex.replace('0x', '') }}"
+                                                        data-bin="{{ expected_hex | hex_to_bin }}/{{ found_hex | hex_to_bin }}"
+                                                        data-dec="{{ expected_hex | hex_to_dec }}/{{ found_hex | hex_to_dec }}">
+                                                        <code>{{ expected_hex.replace('0x', '') }}/{{ found_hex.replace('0x', '') }}</code>
+                                                    </td>
+                                                {% else %}
+                                                    <td data-hex="{{ value.replace('0x', '') }}"
+                                                        data-bin="{{ value | hex_to_bin }}"
+                                                        data-dec="{{ value | hex_to_dec }}">
+                                                        <code>{{ value.replace('0x', '') }}</code>
+                                                    </td>
+                                                {% endif %}
+                                            {% endfor %}
+                                        </tr>
+                                        {% endif %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </details>
+    {% endfor %}
+</div>
+{% else %}
+<div class="status-success file-status">
+    <h2>All Test Cases Passed!</h2>
+    <p>Congratulations! Your circuit passed all the testbenches for this lab.</p>
+</div>
+{% endif %}
+
+<script>
+    function setBase(radio, base) {
+        const container = radio.closest('.failed-test-container');
+        const table = container.querySelector('.traceback-table');
+        table.dataset.displayBase = base;
+
+        const indicator = radio.parentElement.querySelector('.toggle-indicator');
+        if (base === 'hex') {
+            indicator.style.transform = 'translateX(0)';
+        } else if (base === 'bin') {
+            indicator.style.transform = 'translateX(100%)';
+        } else { // dec
+            indicator.style.transform = 'translateX(200%)';
+        }
+
+        table.querySelectorAll('td[data-hex]').forEach(cell => {
+            const code = cell.querySelector('code');
+            code.textContent = cell.dataset[base];
+        });
+    }
+
+    function toggleFailures(checkbox) {
+        const container = checkbox.closest('.failed-test-container');
+        const table = container.querySelector('.traceback-table');
+        const showOnlyFailures = checkbox.checked;
+
+        table.querySelectorAll('tbody .test-row').forEach(row => {
+            if (showOnlyFailures && !row.classList.contains('failing-row')) {
+                row.style.display = 'none';
+            } else {
+                row.style.display = '';
+            }
+        });
+    }
+</script>

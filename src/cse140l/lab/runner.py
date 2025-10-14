@@ -6,8 +6,8 @@ import argparse
 from typing import List, Dict, Tuple
 import base64
 
-import jinja2
-import importlib.resources
+import requests
+import json
 
 from cse140l.digital.stats import GateStat, get_gate_count
 from cse140l.digital.tests import TestOutput
@@ -18,93 +18,87 @@ from cse140l.lab.config import get_config_from_toml, LabConfig
 from cse140l.log import log, setup_logger
 
 
-def get_jinja_env() -> jinja2.Environment:
-    templates_path = importlib.resources.files("cse140l.lab").joinpath("templates")
-    loader = jinja2.FileSystemLoader(templates_path)
-    return jinja2.Environment(loader=loader)
+
 
 
 class LabRunner:
-    def __init__(self, config_file: Path, gradescope_mode: bool = False, existing_tests: List[Path] = None):
+    def __init__(self, config_file: Path, gradescope_mode: bool = False, existing_tests: List[Path] = None, report_server_url: str = None, student_id: str = None):
         self.config: LabConfig = get_config_from_toml(config_file, gradescope_mode=gradescope_mode)
         self.submission_dir = self.config.submission_directory
         self.top_level = sorted(set(test.top_level for test in self.config.tests))
         self.autograder_writer = AutograderWriter(existing_tests=existing_tests)
         self.digital = Digital(self.config.digital_jar)
-        self.env = get_jinja_env()
+        self.report_server_url = report_server_url
+        self.student_id = student_id
         self.all_failed_tests = []
-        self.generate_header()
+        self.circuit_info = []
+        self.missing_files = []
 
-    def create_header(self) -> str:
-        missing_files = []
-        found_files = []
-        circuit_info = []
+    def _test_output_to_dict(self, test_output: TestOutput) -> Dict:
+        """Converts a TestOutput object to a serializable dictionary."""
+        return {
+            "name": test_output.name,
+            "outcome": test_output.outcome,
+            "output": test_output.output,
+            "error": test_output.error,
+            "signals": test_output.signals,
+            "steps": test_output.steps,
+        }
+
+    def prepare_report_data(self) -> Dict:
+        """Gathers all data needed for the HTML report."""
         analysis_errors = self.analyze_circuit()
         for top_level in self.top_level:
-            if (schematic_path := self.get_schematic_path(top_level)).exists():
-                found_files.append(top_level)
-                circuit_info.append((
-                    top_level,
-                    "data:image/svg+xml;base64," + base64.b64encode(self.digital.img.export_svg(schematic_path).encode("utf-8")).decode("ascii"),
-                    analysis_errors[top_level] if analysis_errors is not None else None
-                ))
+            schematic_path = self.get_schematic_path(top_level)
+            if schematic_path.exists():
+                self.circuit_info.append({
+                    "top_level": top_level,
+                    "base64_png_data": "data:image/svg+xml;base64," + base64.b64encode(
+                        self.digital.img.export_svg(schematic_path).encode("utf-8")).decode("ascii"),
+                    "analysis_errors": analysis_errors.get(top_level) if analysis_errors else []
+                })
             else:
-                missing_files.append(top_level)
+                self.missing_files.append(top_level)
 
-        template = self.env.get_template("header.html.j2")
-
-        output = template.render(
+        serializable_failed_tests = [
             {
-                "circuit_info": circuit_info,
-                "missing_files": missing_files,
-                "lab_number": self.config.lab_number,
-            }
-        )
+                "test_name": test["test_name"],
+                "failed_steps": [self._test_output_to_dict(step) for step in test["failed_steps"]]
+            } for test in self.all_failed_tests
+        ]
 
-        return output
+        return {
+            "lab_number": self.config.lab_number,
+            "circuit_info": self.circuit_info,
+            "missing_files": self.missing_files,
+            "all_failed_tests": serializable_failed_tests,
+        }
 
-    def create_html_report(self) -> str:
-        missing_files = []
-        found_files = []
-        circuit_info = []
-        analysis_errors = self.analyze_circuit()
-        for top_level in self.top_level:
-            if (schematic_path := self.get_schematic_path(top_level)).exists():
-                found_files.append(top_level)
-                circuit_info.append((
-                    top_level,
-                    "data:image/svg+xml;base64," + base64.b64encode(self.digital.img.export_svg(schematic_path).encode("utf-8")).decode("ascii"),
-                    analysis_errors[top_level] if analysis_errors is not None else None
-                ))
+    def post_report(self, url: str, student_id: str, token: str) -> None:
+        """Posts the report data to the report server."""
+        if not url or not student_id or not token:
+            log.warning("Report server URL, student ID, or token not provided. Skipping report submission.")
+            return
+
+        report_data = self.prepare_report_data()
+        endpoint = f"{url.rstrip('/')}/report/{self.config.lab_number}/{student_id}"
+        headers = {
+            "Authorization": f"Bearer {token}",
+            "Content-Type": "application/json"
+        }
+
+        try:
+            response = requests.post(endpoint, headers=headers, data=json.dumps(report_data))
+            response.raise_for_status()
+            log.info(f"Successfully posted report for student {student_id} to {endpoint}")
+            log.info(f"View report at {endpoint}")
+        except requests.exceptions.RequestException as e:
+            log.error(f"Failed to post report to server: {e}")
+            if e.response is not None:
+                log.error(f"Response status: {e.response.status_code}")
+                log.error(f"Response body: {e.response.text}")
             else:
-                missing_files.append(top_level)
-
-        template = self.env.get_template("header.html.j2")
-
-        output = template.render(
-            {
-                "circuit_info": circuit_info,
-                "missing_files": missing_files,
-                "lab_number": self.config.lab_number,
-                "all_failed_tests": self.all_failed_tests,
-            }
-        )
-
-        return output
-
-    def create_error_table(self, failed_tests: List[TestOutput]) -> str:
-        template = self.env.get_template("error_table.html.j2")
-
-        output = template.render(
-            {
-                "failed_tests": failed_tests,
-            }
-        )
-
-        return output
-
-    def generate_header(self) -> None:
-        self.autograder_writer.set_output(self.create_header(), TextFormat.HTML)
+                log.error("No response from server.")
 
     def get_schematic_path(self, top_level: str) -> Path:
         return Path(self.submission_dir, f"{top_level}.dig")
@@ -128,10 +122,10 @@ class LabRunner:
                 for gate in analysis.gates:
                     gate_count = get_gate_count(cached_circuits[top_level], gate)
                     if gate.max_amount is not None and gate.max_amount < gate_count:
-                        analysis_failures[top_level].append(f"circuit has greater than {gate_info(gate)}")
+                        analysis_failures[top_level].append(f"Circuit has {gate_info(gate)} (Maximum of {gate.max_amount} allowed for this lab)")
 
                     if gate.min_amount is not None and gate.min_amount > gate_count:
-                        analysis_failures[top_level].append(f"circuit has less than {gate_info(gate)}")
+                        analysis_failures[top_level].append(f"Circuit has {gate_info(gate)} (Minimum of {gate.min_amount} allowed for this lab)")
 
         return analysis_failures
 
@@ -173,8 +167,15 @@ class LabRunner:
                 result["output_format"] = TextFormat.TEXT
             elif status == TestStatus.FAILED and len(failed) > 0:
                 self.all_failed_tests.append({"test_name": test.name, "failed_steps": failed})
-                result["output"] = self.create_error_table(failed)
-                result["output_format"] = TextFormat.HTML
+                output_text = f"{len(failed)} out of {len(outputs)} test vectors failed."
+                if self.report_server_url and self.student_id:
+                    report_url = f"{self.report_server_url.rstrip('/')}/report/{self.config.lab_number}/{self.student_id}"
+                    output_text += f" See [web report]({report_url}) for details."
+                    result["output_format"] = TextFormat.MARKDOWN
+                else:
+                    output_text += " See web report for details."
+                    result["output_format"] = TextFormat.TEXT
+                result["output"] = output_text
             elif len(outputs) == 0:
                 result["output"] = "We could not test your circuit. This could be due to misnamed ports or other circuit bugs."
                 result["output_format"] = TextFormat.TEXT
@@ -231,10 +232,24 @@ def main():
     )
 
     parser.add_argument(
-        "--html_report",
-        type=Path,
-        default=None,
-        help="Optional path to a file to write the HTML report."
+        "--report-server-url",
+        type=str,
+        default=os.environ.get("REPORT_SERVER_URL"),
+        help="URL of the report server. Can also be set with REPORT_SERVER_URL environment variable."
+    )
+
+    parser.add_argument(
+        "--student-id",
+        type=str,
+        default=os.environ.get("STUDENT_ID"),
+        help="Student ID. Can also be set with STUDENT_ID environment variable."
+    )
+
+    parser.add_argument(
+        "--auth-token",
+        type=str,
+        default=os.environ.get("REPORT_SERVER_AUTH_TOKEN"),
+        help="Authentication token for the report server. Can also be set with REPORT_SERVER_AUTH_TOKEN environment variable."
     )
 
     args = parser.parse_args()
@@ -247,14 +262,18 @@ def main():
 
     os.chdir(args.config_file.absolute().parent)
 
-    runner = LabRunner(args.config_file, gradescope_mode=args.gradescope, existing_tests=args.json_files)
+    runner = LabRunner(
+        args.config_file,
+        gradescope_mode=args.gradescope,
+        existing_tests=args.json_files,
+        report_server_url=args.report_server_url,
+        student_id=args.student_id
+    )
     runner.run_tests()
     runner.generate_report(args.output_file)
     runner.report()
-    runner.analyze_circuit()
-
-    if args.html_report:
-        args.html_report.write_text(runner.create_html_report())
+    
+    runner.post_report(args.report_server_url, args.student_id, args.auth_token)
 
 if __name__ == '__main__':
     main()
