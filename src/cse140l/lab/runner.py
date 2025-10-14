@@ -96,7 +96,7 @@ class LabRunner:
             log.error(f"Failed to post report to server: {e}")
             if e.response is not None:
                 log.error(f"Response status: {e.response.status_code}")
-                log.error(f"Response body: {e.response.text}")
+                log.error(f"Response body:\n{e.response.text}")
             else:
                 log.error("No response from server.")
 
@@ -169,7 +169,8 @@ class LabRunner:
                 self.all_failed_tests.append({"test_name": test.name, "failed_steps": failed})
                 output_text = f"{len(failed)} out of {len(outputs)} test vectors failed."
                 if self.report_server_url and self.student_id:
-                    report_url = f"{self.report_server_url.rstrip('/')}/report/{self.config.lab_number}/{self.student_id}"
+                    fragment = test.name.lower().replace(' ', '-')
+                    report_url = f"{self.report_server_url.rstrip('/')}/report/{self.config.lab_number}/{self.student_id}#{fragment}"
                     output_text += f" See [web report]({report_url}) for details."
                     result["output_format"] = TextFormat.MARKDOWN
                 else:
@@ -184,6 +185,10 @@ class LabRunner:
             self.autograder_writer.add_test(test_result)
 
     def generate_report(self, report_path: Path) -> None:
+        if self.report_server_url and self.student_id:
+            report_url = f"{self.report_server_url.rstrip('/')}/report/{self.config.lab_number}/{self.student_id}"
+            output_text = f"Your detailed web report is available at [{report_url}]({report_url})."
+            self.autograder_writer.set_output(output_text, output_format=TextFormat.MARKDOWN)
         self.autograder_writer.write_report(report_path)
 
     def report(self) -> None:

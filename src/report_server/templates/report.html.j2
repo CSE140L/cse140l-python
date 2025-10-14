@@ -316,7 +316,8 @@
     <h2>Testbench Tracebacks</h2>
     {% for test_run in all_failed_tests %}
         {% set outer_loop_index = loop.index %}
-        <details open>
+        {% set test_name_slug = test_run.test_name.lower().replace(' ', '-') %}
+        <details open id="{{ test_name_slug }}">
             <summary><h3>Failures in: {{ test_run.test_name }}</h3></summary>
             <div class="traceback-content">
                 {% for failed_test in test_run.failed_steps %}
