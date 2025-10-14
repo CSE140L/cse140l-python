@@ -33,6 +33,7 @@ class LabRunner:
         self.all_failed_tests = []
         self.circuit_info = []
         self.missing_files = []
+        self.test_errors = defaultdict(list)
 
     def _test_output_to_dict(self, test_output: TestOutput) -> Dict:
         """Converts a TestOutput object to a serializable dictionary."""
@@ -48,6 +49,15 @@ class LabRunner:
     def prepare_report_data(self) -> Dict:
         """Gathers all data needed for the HTML report."""
         analysis_errors = self.analyze_circuit()
+
+        all_errors = defaultdict(list)
+        if analysis_errors:
+            for top_level, errors in analysis_errors.items():
+                all_errors[top_level].extend(errors)
+
+        for top_level, errors in self.test_errors.items():
+            all_errors[top_level].extend(errors)
+
         for top_level in self.top_level:
             schematic_path = self.get_schematic_path(top_level)
             if schematic_path.exists():
@@ -55,7 +65,7 @@ class LabRunner:
                     "top_level": top_level,
                     "base64_png_data": "data:image/svg+xml;base64," + base64.b64encode(
                         self.digital.img.export_svg(schematic_path).encode("utf-8")).decode("ascii"),
-                    "analysis_errors": analysis_errors.get(top_level) if analysis_errors else []
+                    "analysis_errors": all_errors.get(top_level)
                 })
             else:
                 self.missing_files.append(top_level)
@@ -145,6 +155,8 @@ class LabRunner:
                     score = 0
                     failed = []
                     error = True
+                    error_message = outputs[0].output if outputs[0].output else outputs[0].name
+                    self.test_errors[test.top_level].append(f"Error running test '{test.name}': {error_message}")
                 else:
                     failed: List[TestOutput] = list(filter(lambda t: t.outcome == TestStatus.FAILED, outputs))
                     score = (1. - (len(failed) / len(outputs))) * test.max_score

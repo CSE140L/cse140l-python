@@ -38,7 +38,8 @@ class CircuitStats(DigitalModule):
         result = super()._run(args)
 
         if result.returncode != 0:
-            raise RuntimeError(result.stderr.decode("utf-8"))
+            return []
+            # raise RuntimeError(result.stderr.decode("utf-8"))
 
         csv_reader = csv.reader(StringIO(result.stdout.decode("utf-8")))
         _ = next(csv_reader)
