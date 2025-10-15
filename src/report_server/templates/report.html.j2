@@ -109,10 +109,32 @@
         background-color: #FFFFFF;
     }
     summary {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
         padding: 10px;
         font-weight: bold;
         cursor: pointer;
         outline: none;
+    }
+    .badge {
+        display: inline-block;
+        padding: 0.25em 0.6em;
+        font-size: 75%;
+        font-weight: 700;
+        line-height: 1;
+        text-align: center;
+        white-space: nowrap;
+        vertical-align: baseline;
+        border-radius: 0.75rem;
+        color: white;
+        margin-left: 10px;
+    }
+    .error-badge {
+        background-color: var(--status-error);
+    }
+    .success-badge {
+        background-color: var(--status-success);
     }
     details[open] {
         border-color: var(--ucsd-blue-dark);
@@ -289,8 +311,15 @@
     <div>
         <h2>Submitted Circuit Analysis:</h2>
         {% for info in circuit_info %}
-            <details>
-                <summary><h3>Circuit File: <code>{{ info.top_level }}.dig</code></h3></summary>
+            <details {% if info.analysis_errors %}open{% endif %}>
+                <summary>
+                    <h3>Circuit File: <code>{{ info.top_level }}.dig</code></h3>
+                    {% if info.analysis_errors %}
+                        <span class="badge error-badge" title="{{ info.analysis_errors | length }} errors">{{ info.analysis_errors | length }}</span>
+                    {% else %}
+                        <span class="badge success-badge">Passed</span>
+                    {% endif %}
+                </summary>
                 <div class="circuit-container">
                     <div class="circuit-image">
                         <p><strong>Screenshot of Circuit:</strong></p>
